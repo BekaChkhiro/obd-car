@@ -3,6 +3,9 @@ import '../global.css';
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { useAuthStore } from '@/src/store/auth';
+import { SQLiteProvider } from '@/src/db';
+import { runMigrations } from '@/src/db/migrations';
+import { DB_NAME } from '@/src/db/database';
 
 export default function RootLayout() {
   const { hydrate, isHydrated } = useAuthStore();
@@ -12,15 +15,16 @@ export default function RootLayout() {
   }, [hydrate]);
 
   if (!isHydrated) {
-    // Render nothing while we load tokens from SecureStore.
     return null;
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(auth)" />
-      <Stack.Screen name="(app)" />
-      <Stack.Screen name="index" redirect />
-    </Stack>
+    <SQLiteProvider databaseName={DB_NAME} onInit={runMigrations}>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(app)" />
+        <Stack.Screen name="index" redirect />
+      </Stack>
+    </SQLiteProvider>
   );
 }

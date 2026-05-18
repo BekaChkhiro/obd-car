@@ -6,6 +6,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ...((config as ExpoConfig).plugins ?? []),
     'expo-secure-store',
     'expo-web-browser',
+    'expo-sqlite',
   ],
   extra: {
     ...(config as ExpoConfig).extra,
