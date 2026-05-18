@@ -15,6 +15,8 @@ interface GaugeCardProps {
   max: number;
   precision?: number;
   thresholds?: GaugeThresholds;
+  /** Override to force the card into the alert (danger) visual state. */
+  alertActive?: boolean;
   className?: string;
 }
 
@@ -44,10 +46,12 @@ export function GaugeCard({
   max,
   precision = 0,
   thresholds = {},
+  alertActive = false,
   className = '',
 }: GaugeCardProps) {
   const hasValue = value !== null;
-  const status: GaugeStatus = hasValue ? getStatus(value, thresholds) : 'good';
+  const derivedStatus: GaugeStatus = hasValue ? getStatus(value, thresholds) : 'good';
+  const status: GaugeStatus = alertActive ? 'danger' : derivedStatus;
   const colors = STATUS_COLORS[status];
 
   const clamped = hasValue ? Math.max(min, Math.min(max, value)) : 0;
@@ -55,7 +59,7 @@ export function GaugeCard({
   const displayValue = hasValue ? value.toFixed(precision) : '—';
 
   return (
-    <View className={`rounded-2xl bg-gray-900 p-4 ${className}`}>
+    <View className={`rounded-2xl bg-gray-900 p-4 ${alertActive ? 'border border-red-500' : ''} ${className}`}>
       <Text className="text-xs font-semibold uppercase tracking-widest text-gray-500">
         {label}
       </Text>

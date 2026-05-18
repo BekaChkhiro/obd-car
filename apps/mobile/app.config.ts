@@ -7,6 +7,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-secure-store',
     'expo-web-browser',
     'expo-sqlite',
+    ['expo-notifications', { icon: './assets/icon.png', color: '#3b82f6' }],
   ],
   extra: {
     ...(config as ExpoConfig).extra,
