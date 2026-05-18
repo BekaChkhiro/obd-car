@@ -6,6 +6,7 @@ import { connectionMachine } from '@/src/ble/connection';
 import { DashboardPoller } from '@/src/ble/dashboard-poller';
 import { createMockAdapter } from '@/src/ble/mock-adapter';
 import { GaugeCard } from '@/src/components/GaugeCard';
+import { PidChart } from '@/src/components/PidChart';
 import type { ConnectedAdapter } from '@/src/ble/manager';
 
 function useActiveAdapter(connectionPhase: string): ConnectedAdapter | null {
@@ -16,7 +17,10 @@ function useActiveAdapter(connectionPhase: string): ConnectedAdapter | null {
 
 export default function DashboardScreen() {
   const connectionPhase = useBleStore((s) => s.connectionPhase);
-  const { rpm, speed, coolantTemp, fuelLevel, batteryVoltage, reset } = useDashboardStore();
+  const {
+    rpm, speed, coolantTemp, fuelLevel, batteryVoltage, reset,
+    rpmSeries, speedSeries, coolantTempSeries, fuelLevelSeries, batteryVoltageSeries,
+  } = useDashboardStore();
 
   const realAdapter = useActiveAdapter(connectionPhase);
   const [demoAdapter, setDemoAdapter] = useState<ConnectedAdapter | null>(null);
@@ -159,6 +163,62 @@ export default function DashboardScreen() {
         min={8}
         max={16}
         precision={2}
+        thresholds={{ warnLow: 11.5, dangerLow: 10, warnHigh: 14.8, dangerHigh: 15.5 }}
+      />
+
+      {/* Charts section */}
+      <Text className="mb-3 mt-6 text-xs font-semibold uppercase tracking-widest text-gray-600">
+        History
+      </Text>
+
+      <View className="mb-3 flex-row gap-3">
+        <PidChart
+          label="RPM"
+          data={rpmSeries}
+          min={0}
+          max={8000}
+          unit="rpm"
+          thresholds={{ warnHigh: 5000, dangerHigh: 7000 }}
+          className="flex-1"
+        />
+        <PidChart
+          label="Speed"
+          data={speedSeries}
+          min={0}
+          max={200}
+          unit="km/h"
+          thresholds={{ warnHigh: 100, dangerHigh: 150 }}
+          className="flex-1"
+        />
+      </View>
+
+      <View className="mb-3 flex-row gap-3">
+        <PidChart
+          label="Coolant"
+          data={coolantTempSeries}
+          min={-40}
+          max={150}
+          unit="°C"
+          thresholds={{ warnLow: 60, warnHigh: 100, dangerHigh: 110 }}
+          className="flex-1"
+        />
+        <PidChart
+          label="Fuel"
+          data={fuelLevelSeries}
+          min={0}
+          max={100}
+          unit="%"
+          thresholds={{ warnLow: 20, dangerLow: 10 }}
+          className="flex-1"
+        />
+      </View>
+
+      <PidChart
+        label="Battery Voltage"
+        data={batteryVoltageSeries}
+        min={8}
+        max={16}
+        unit="V"
         thresholds={{ warnLow: 11.5, dangerLow: 10, warnHigh: 14.8, dangerHigh: 15.5 }}
       />
     </ScrollView>
