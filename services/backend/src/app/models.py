@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Text
+from sqlalchemy import DateTime, ForeignKey, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
@@ -30,6 +30,9 @@ class User(Base):
     diagnostic_sessions: Mapped[list["DiagnosticSession"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
+    vehicles: Mapped[list["Vehicle"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class RefreshToken(Base):
@@ -55,7 +58,7 @@ class DiagnosticSession(Base):
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     supported_pids: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON array
     vin: Mapped[str | None] = mapped_column(String(17), nullable=True)
@@ -66,3 +69,70 @@ class DiagnosticSession(Base):
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     user: Mapped[User] = relationship(back_populates="diagnostic_sessions")
+    messages: Mapped[list["Message"]] = relationship(
+        back_populates="session", cascade="all, delete-orphan"
+    )
+
+    __table_args__ = (
+        Index("ix_diagnostic_sessions_user_id_started_at", "user_id", "started_at"),
+    )
+
+
+class Vehicle(Base):
+    __tablename__ = "vehicles"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    make: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    model: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    year: Mapped[int | None] = mapped_column(nullable=True)
+    vin: Mapped[str | None] = mapped_column(String(17), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
+
+    user: Mapped[User] = relationship(back_populates="vehicles")
+
+    __table_args__ = (Index("ix_vehicles_user_id_created_at", "user_id", "created_at"),)
+
+
+class Message(Base):
+    __tablename__ = "messages"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    session_id: Mapped[str] = mapped_column(
+        ForeignKey("diagnostic_sessions.id", ondelete="CASCADE"), nullable=False
+    )
+    role: Mapped[str] = mapped_column(String(16), nullable=False)  # user | assistant | tool
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
+
+    session: Mapped[DiagnosticSession] = relationship(back_populates="messages")
+    tool_calls: Mapped[list["ToolCall"]] = relationship(
+        back_populates="message", cascade="all, delete-orphan"
+    )
+
+    __table_args__ = (Index("ix_messages_session_id_created_at", "session_id", "created_at"),)
+
+
+class ToolCall(Base):
+    __tablename__ = "tool_calls"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    message_id: Mapped[str] = mapped_column(
+        ForeignKey("messages.id", ondelete="CASCADE"), nullable=False
+    )
+    tool_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    input: Mapped[str] = mapped_column(Text, nullable=False)  # JSON blob
+    output: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON blob or null
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
+
+    message: Mapped["Message"] = relationship(back_populates="tool_calls")
+
+    __table_args__ = (Index("ix_tool_calls_message_id", "message_id"),)
