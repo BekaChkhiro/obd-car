@@ -53,8 +53,45 @@ export async function markToolCallSynced(
   );
 }
 
+export async function markToolCallFailed(
+  db: SQLiteDatabase,
+  id: string,
+): Promise<void> {
+  await db.runAsync(
+    "UPDATE tool_calls SET sync_status = 'failed' WHERE id = ?",
+    id,
+  );
+}
+
 export async function getPendingToolCalls(db: SQLiteDatabase): Promise<ToolCall[]> {
   return db.getAllAsync<ToolCall>(
     "SELECT * FROM tool_calls WHERE sync_status = 'pending' ORDER BY created_at ASC",
+  );
+}
+
+/** Upsert a tool call pulled from the server (server-wins, mirrors messages). */
+export async function upsertServerToolCall(
+  db: SQLiteDatabase,
+  toolCall: ToolCall,
+): Promise<void> {
+  await db.runAsync(
+    `INSERT INTO tool_calls (id, message_id, tool_name, input, output, created_at, sync_status, server_id)
+     VALUES ($id, $message_id, $tool_name, $input, $output, $created_at, 'synced', $server_id)
+     ON CONFLICT(id) DO UPDATE SET
+       tool_name   = excluded.tool_name,
+       input       = excluded.input,
+       output      = excluded.output,
+       created_at  = excluded.created_at,
+       sync_status = 'synced',
+       server_id   = excluded.server_id`,
+    {
+      $id: toolCall.id,
+      $message_id: toolCall.message_id,
+      $tool_name: toolCall.tool_name,
+      $input: toolCall.input,
+      $output: toolCall.output,
+      $created_at: toolCall.created_at,
+      $server_id: toolCall.server_id,
+    },
   );
 }

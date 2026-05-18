@@ -61,6 +61,20 @@ const migrations: Migration[] = [
         ON tool_calls (message_id);
     `);
   },
+  // v2 — sync cursor + LWW metadata for vehicles
+  async (db) => {
+    await db.execAsync(`
+      ALTER TABLE vehicles
+        ADD COLUMN updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'));
+      ALTER TABLE vehicles
+        ADD COLUMN deleted_at TEXT;
+
+      CREATE TABLE IF NOT EXISTS sync_cursors (
+        entity         TEXT PRIMARY KEY,
+        last_pulled_at TEXT
+      );
+    `);
+  },
 ];
 
 export async function runMigrations(db: SQLiteDatabase): Promise<void> {
