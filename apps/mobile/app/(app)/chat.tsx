@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   FlatList,
@@ -6,6 +6,7 @@ import {
   Platform,
   Pressable,
   Text,
+  TextInput,
   View,
   type ListRenderItemInfo,
 } from 'react-native';
@@ -14,6 +15,14 @@ import { useChatStore } from '@/src/store/chat';
 import { MarkdownText } from '@/src/components/MarkdownText';
 import { ToolCallBadge } from '@/src/components/ToolCallBadge';
 import type { ChatMessage } from '@/src/types/chat';
+
+const QUICK_PROMPTS = [
+  'რა შეცდომა გვაქვს?',
+  'ბატარეა როგორ არის?',
+  'ძრავი რატომ ცხელდება?',
+];
+
+const MAX_CHARS = 1000;
 
 function StreamingDots() {
   const anims = useRef([new Animated.Value(0), new Animated.Value(0), new Animated.Value(0)]).current;
@@ -94,7 +103,7 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
   );
 }
 
-function EmptyChat() {
+function EmptyChat({ onSend }: { onSend: (text: string) => void }) {
   return (
     <View className="flex-1 items-center justify-center px-8">
       <Text className="text-center text-2xl font-bold text-white">OBD AI Assistant</Text>
@@ -102,15 +111,75 @@ function EmptyChat() {
         Ask about your vehicle — diagnostics, error codes, live sensor data.
       </Text>
       <View className="mt-6 gap-2 self-stretch">
-        {['What error codes do I have?', 'How is my battery?', 'Why is my engine hot?'].map(
-          (prompt) => (
-            <Pressable
-              key={prompt}
-              className="rounded-xl border border-gray-700 bg-gray-800/50 px-4 py-3 active:bg-gray-700"
-            >
-              <Text className="text-sm text-gray-300">{prompt}</Text>
-            </Pressable>
-          )
+        {QUICK_PROMPTS.map((prompt) => (
+          <Pressable
+            key={prompt}
+            onPress={() => onSend(prompt)}
+            className="rounded-xl border border-gray-700 bg-gray-800/50 px-4 py-3 active:bg-gray-700"
+          >
+            <Text className="text-sm text-gray-300">{prompt}</Text>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function InputBar({ onSend, onAbort }: { onSend: (text: string) => void; onAbort: () => void }) {
+  const [text, setText] = useState('');
+  const isStreaming = useChatStore((s) => s.isStreaming);
+  const messages = useChatStore((s) => s.messages);
+  const clearMessages = useChatStore((s) => s.clearMessages);
+  const insets = useSafeAreaInsets();
+
+  const overLimit = text.length > MAX_CHARS;
+  const canSend = text.trim().length > 0 && !isStreaming && !overLimit;
+
+  const handleSend = () => {
+    if (!canSend) return;
+    onSend(text.trim());
+    setText('');
+  };
+
+  return (
+    <View style={{ paddingBottom: insets.bottom + 8 }} className="border-t border-gray-800 bg-gray-900 px-3 pt-3">
+      <View
+        className={`flex-row items-end gap-2 rounded-2xl border bg-gray-800 px-3 py-2 ${overLimit ? 'border-red-500' : 'border-gray-700'}`}
+      >
+        <TextInput
+          className="flex-1 text-sm leading-5 text-white"
+          placeholder="Message…"
+          placeholderTextColor="#6B7280"
+          value={text}
+          onChangeText={setText}
+          multiline
+          style={{ maxHeight: 120 }}
+          returnKeyType="send"
+          blurOnSubmit={false}
+          onSubmitEditing={handleSend}
+        />
+        {isStreaming ? (
+          <Pressable onPress={onAbort} className="mb-0.5 rounded-full bg-red-600 p-1.5">
+            <Text className="text-xs font-bold text-white">■</Text>
+          </Pressable>
+        ) : (
+          <Pressable
+            onPress={handleSend}
+            disabled={!canSend}
+            className={`mb-0.5 rounded-full p-1.5 ${canSend ? 'bg-blue-600' : 'bg-gray-700'}`}
+          >
+            <Text className={`text-xs font-bold ${canSend ? 'text-white' : 'text-gray-500'}`}>↑</Text>
+          </Pressable>
+        )}
+      </View>
+      <View className="mt-1 flex-row items-center justify-between px-1">
+        <Text className={`text-xs ${overLimit ? 'text-red-400' : 'text-gray-600'}`}>
+          {text.length > 0 ? `${text.length} / ${MAX_CHARS}` : ''}
+        </Text>
+        {messages.length > 0 && (
+          <Pressable onPress={clearMessages}>
+            <Text className="text-xs text-gray-600">Clear conversation</Text>
+          </Pressable>
         )}
       </View>
     </View>
@@ -122,10 +191,10 @@ function renderMessage({ item }: ListRenderItemInfo<ChatMessage>) {
 }
 
 export default function ChatScreen() {
-  const insets = useSafeAreaInsets();
   const messages = useChatStore((s) => s.messages);
   const isStreaming = useChatStore((s) => s.isStreaming);
-  const clearMessages = useChatStore((s) => s.clearMessages);
+  const addMessage = useChatStore((s) => s.addMessage);
+  const setStreaming = useChatStore((s) => s.setStreaming);
   const listRef = useRef<FlatList<ChatMessage>>(null);
 
   useEffect(() => {
@@ -134,6 +203,22 @@ export default function ChatScreen() {
     }
   }, [messages.length, isStreaming]);
 
+  const handleSend = useCallback(
+    (text: string) => {
+      addMessage({
+        id: Math.random().toString(36).slice(2) + Date.now().toString(36),
+        role: 'user',
+        content: text,
+        createdAt: new Date().toISOString(),
+      });
+    },
+    [addMessage],
+  );
+
+  const handleAbort = useCallback(() => {
+    setStreaming(false);
+  }, [setStreaming]);
+
   return (
     <KeyboardAvoidingView
       className="flex-1 bg-gray-950"
@@ -141,7 +226,7 @@ export default function ChatScreen() {
       keyboardVerticalOffset={90}
     >
       {messages.length === 0 ? (
-        <EmptyChat />
+        <EmptyChat onSend={handleSend} />
       ) : (
         <FlatList
           ref={listRef}
@@ -154,27 +239,7 @@ export default function ChatScreen() {
         />
       )}
 
-      {/* Placeholder input bar — wired in T4.2 */}
-      <View
-        style={{ paddingBottom: insets.bottom + 8 }}
-        className="border-t border-gray-800 bg-gray-900 px-3 pt-3"
-      >
-        <View className="flex-row items-center gap-2 rounded-2xl border border-gray-700 bg-gray-800 px-4 py-3">
-          <Text className="flex-1 text-sm text-gray-500">Message…</Text>
-          <Pressable className="rounded-full bg-blue-600 p-1.5">
-            <Text className="text-xs font-bold text-white">↑</Text>
-          </Pressable>
-        </View>
-
-        {messages.length > 0 && (
-          <Pressable
-            onPress={clearMessages}
-            className="mt-2 items-center"
-          >
-            <Text className="text-xs text-gray-600">Clear conversation</Text>
-          </Pressable>
-        )}
-      </View>
+      <InputBar onSend={handleSend} onAbort={handleAbort} />
     </KeyboardAvoidingView>
   );
 }
