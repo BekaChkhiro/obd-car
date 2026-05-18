@@ -8,6 +8,7 @@ import { connectionMachine } from '@/src/ble/connection';
 import { DashboardPoller } from '@/src/ble/dashboard-poller';
 import { createMockAdapter } from '@/src/ble/mock-adapter';
 import { GaugeCard } from '@/src/components/GaugeCard';
+import { PidChart } from '@/src/components/PidChart';
 import { useThresholdAlerts } from '@/src/hooks/useThresholdAlerts';
 import { requestNotificationPermissions } from '@/src/lib/notifications';
 import type { ConnectedAdapter } from '@/src/ble/manager';
@@ -20,7 +21,10 @@ function useActiveAdapter(connectionPhase: string): ConnectedAdapter | null {
 export default function DashboardScreen() {
   const router = useRouter();
   const connectionPhase = useBleStore((s) => s.connectionPhase);
-  const { rpm, speed, coolantTemp, fuelLevel, batteryVoltage, reset } = useDashboardStore();
+  const {
+    rpm, speed, coolantTemp, fuelLevel, batteryVoltage, reset,
+    rpmHistory, speedHistory, coolantTempHistory, fuelLevelHistory, batteryVoltageHistory,
+  } = useDashboardStore();
   const thresholds = useThresholdsStore((s) => s.thresholds);
 
   const realAdapter = useActiveAdapter(connectionPhase);
@@ -191,6 +195,64 @@ export default function DashboardScreen() {
         thresholds={{ warnLow: 11.5, dangerLow: 10, warnHigh: 14.8, dangerHigh: 15.5 }}
         alertActive={lowBattery}
       />
+
+      {/* History — 5-minute sparklines */}
+      <View className="mt-5">
+        <Text className="mb-3 text-xs font-semibold uppercase tracking-widest text-gray-500">
+          5-Min History
+        </Text>
+
+        <View className="mb-3 flex-row gap-3">
+          <PidChart
+            label="RPM"
+            data={rpmHistory}
+            min={0}
+            max={8000}
+            unit="rpm"
+            color="#3b82f6"
+            className="flex-1"
+          />
+          <PidChart
+            label="Speed"
+            data={speedHistory}
+            min={0}
+            max={200}
+            unit={speed.unit || 'km/h'}
+            color="#10b981"
+            className="flex-1"
+          />
+        </View>
+
+        <View className="mb-3 flex-row gap-3">
+          <PidChart
+            label="Coolant"
+            data={coolantTempHistory}
+            min={-40}
+            max={150}
+            unit={coolantTemp.unit || '°C'}
+            color="#f59e0b"
+            className="flex-1"
+          />
+          <PidChart
+            label="Fuel"
+            data={fuelLevelHistory}
+            min={0}
+            max={100}
+            unit={fuelLevel.unit || '%'}
+            color="#8b5cf6"
+            className="flex-1"
+          />
+        </View>
+
+        <PidChart
+          label="Battery Voltage"
+          data={batteryVoltageHistory}
+          min={8}
+          max={16}
+          unit={batteryVoltage.unit || 'V'}
+          color="#06b6d4"
+        />
+      </View>
 
       {/* Active alerts summary */}
       {hasAlerts && (
