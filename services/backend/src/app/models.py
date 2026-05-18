@@ -57,9 +57,7 @@ class DiagnosticSession(Base):
     __tablename__ = "diagnostic_sessions"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
-    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     supported_pids: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON array
     vin: Mapped[str | None] = mapped_column(String(17), nullable=True)
     locale: Mapped[str] = mapped_column(String(16), default="en", nullable=False)
@@ -73,18 +71,14 @@ class DiagnosticSession(Base):
         back_populates="session", cascade="all, delete-orphan"
     )
 
-    __table_args__ = (
-        Index("ix_diagnostic_sessions_user_id_started_at", "user_id", "started_at"),
-    )
+    __table_args__ = (Index("ix_diagnostic_sessions_user_id_started_at", "user_id", "started_at"),)
 
 
 class Vehicle(Base):
     __tablename__ = "vehicles"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
-    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     make: Mapped[str | None] = mapped_column(String(100), nullable=True)
     model: Mapped[str | None] = mapped_column(String(100), nullable=True)
     year: Mapped[int | None] = mapped_column(nullable=True)
@@ -92,10 +86,18 @@ class Vehicle(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, nullable=False
     )
+    # LWW conflict resolution — client + server compare on this column.
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     user: Mapped[User] = relationship(back_populates="vehicles")
 
-    __table_args__ = (Index("ix_vehicles_user_id_created_at", "user_id", "created_at"),)
+    __table_args__ = (
+        Index("ix_vehicles_user_id_created_at", "user_id", "created_at"),
+        Index("ix_vehicles_user_id_updated_at", "user_id", "updated_at"),
+    )
 
 
 class Message(Base):

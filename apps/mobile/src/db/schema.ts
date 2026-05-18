@@ -8,6 +8,8 @@ export interface Vehicle {
   year: number | null;
   vin: string | null;
   created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
   sync_status: SyncStatus;
   server_id: number | null;
 }
@@ -42,4 +44,10 @@ export interface ToolCall {
   created_at: string;
   sync_status: SyncStatus;
   server_id: number | null;
+}
+
+/** Per-entity cursor for pull-since queries. Key examples: "vehicles", "messages". */
+export interface SyncCursor {
+  entity: string;
+  last_pulled_at: string | null;
 }

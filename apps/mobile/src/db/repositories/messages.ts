@@ -66,3 +66,31 @@ export async function getPendingMessages(db: SQLiteDatabase): Promise<Message[]>
     "SELECT * FROM messages WHERE sync_status = 'pending' ORDER BY created_at ASC",
   );
 }
+
+/**
+ * Upsert a message pulled from the server. Messages are immutable: on
+ * conflict we trust the server copy (server-wins).
+ */
+export async function upsertServerMessage(
+  db: SQLiteDatabase,
+  message: Message,
+): Promise<void> {
+  await db.runAsync(
+    `INSERT INTO messages (id, session_id, role, content, created_at, sync_status, server_id)
+     VALUES ($id, $session_id, $role, $content, $created_at, 'synced', $server_id)
+     ON CONFLICT(id) DO UPDATE SET
+       role        = excluded.role,
+       content     = excluded.content,
+       created_at  = excluded.created_at,
+       sync_status = 'synced',
+       server_id   = excluded.server_id`,
+    {
+      $id: message.id,
+      $session_id: message.session_id,
+      $role: message.role,
+      $content: message.content,
+      $created_at: message.created_at,
+      $server_id: message.server_id,
+    },
+  );
+}
