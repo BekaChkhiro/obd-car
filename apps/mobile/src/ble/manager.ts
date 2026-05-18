@@ -7,8 +7,9 @@ import {
   type BleElmTransportConfig,
 } from './elm327';
 import { PidReader } from './pid-reader';
+import { discoverSupportedPids, loadCachedPids, clearCachedPids } from './pid-discovery';
 
-export { PidReader };
+export { PidReader, discoverSupportedPids, loadCachedPids, clearCachedPids };
 export type { PidKey, PidValue } from './pid-reader';
 
 export const bleManager = new BleManager();
