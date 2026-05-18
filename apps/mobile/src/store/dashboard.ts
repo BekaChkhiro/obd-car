@@ -7,12 +7,35 @@ export interface GaugeReading {
   updatedAt: number | null;
 }
 
+export interface TimePoint {
+  value: number;
+  ts: number;
+}
+
+const FIVE_MIN_MS = 5 * 60 * 1000;
+const MAX_HISTORY_POINTS = 300;
+
+function trimHistory(history: TimePoint[], next: TimePoint): TimePoint[] {
+  const cutoff = Date.now() - FIVE_MIN_MS;
+  const appended = [...history, next];
+  const trimmed = appended.filter((p) => p.ts >= cutoff);
+  return trimmed.length > MAX_HISTORY_POINTS
+    ? trimmed.slice(trimmed.length - MAX_HISTORY_POINTS)
+    : trimmed;
+}
+
 interface DashboardState {
   rpm: GaugeReading;
   speed: GaugeReading;
   coolantTemp: GaugeReading;
   fuelLevel: GaugeReading;
   batteryVoltage: GaugeReading;
+
+  rpmHistory: TimePoint[];
+  speedHistory: TimePoint[];
+  coolantTempHistory: TimePoint[];
+  fuelLevelHistory: TimePoint[];
+  batteryVoltageHistory: TimePoint[];
 
   setRpm(value: number, unit: string): void;
   setSpeed(value: number, unit: string): void;
@@ -56,33 +79,54 @@ function persistSnapshot(snapshot: DashboardSnapshot): void {
 export const useDashboardStore = create<DashboardState>((set, get) => ({
   ...loadSnapshot(),
 
+  rpmHistory: [],
+  speedHistory: [],
+  coolantTempHistory: [],
+  fuelLevelHistory: [],
+  batteryVoltageHistory: [],
+
   setRpm: (value, unit) => {
-    set({ rpm: { value, unit, updatedAt: Date.now() } });
+    set((s) => ({
+      rpm: { value, unit, updatedAt: Date.now() },
+      rpmHistory: trimHistory(s.rpmHistory, { value, ts: Date.now() }),
+    }));
     const { rpm, speed, coolantTemp, fuelLevel, batteryVoltage } = get();
     persistSnapshot({ rpm, speed, coolantTemp, fuelLevel, batteryVoltage });
   },
   setSpeed: (value, unit) => {
-    set({ speed: { value, unit, updatedAt: Date.now() } });
+    set((s) => ({
+      speed: { value, unit, updatedAt: Date.now() },
+      speedHistory: trimHistory(s.speedHistory, { value, ts: Date.now() }),
+    }));
     const { rpm, speed, coolantTemp, fuelLevel, batteryVoltage } = get();
     persistSnapshot({ rpm, speed, coolantTemp, fuelLevel, batteryVoltage });
   },
   setCoolantTemp: (value, unit) => {
-    set({ coolantTemp: { value, unit, updatedAt: Date.now() } });
+    set((s) => ({
+      coolantTemp: { value, unit, updatedAt: Date.now() },
+      coolantTempHistory: trimHistory(s.coolantTempHistory, { value, ts: Date.now() }),
+    }));
     const { rpm, speed, coolantTemp, fuelLevel, batteryVoltage } = get();
     persistSnapshot({ rpm, speed, coolantTemp, fuelLevel, batteryVoltage });
   },
   setFuelLevel: (value, unit) => {
-    set({ fuelLevel: { value, unit, updatedAt: Date.now() } });
+    set((s) => ({
+      fuelLevel: { value, unit, updatedAt: Date.now() },
+      fuelLevelHistory: trimHistory(s.fuelLevelHistory, { value, ts: Date.now() }),
+    }));
     const { rpm, speed, coolantTemp, fuelLevel, batteryVoltage } = get();
     persistSnapshot({ rpm, speed, coolantTemp, fuelLevel, batteryVoltage });
   },
   setBatteryVoltage: (value, unit) => {
-    set({ batteryVoltage: { value, unit, updatedAt: Date.now() } });
+    set((s) => ({
+      batteryVoltage: { value, unit, updatedAt: Date.now() },
+      batteryVoltageHistory: trimHistory(s.batteryVoltageHistory, { value, ts: Date.now() }),
+    }));
     const { rpm, speed, coolantTemp, fuelLevel, batteryVoltage } = get();
     persistSnapshot({ rpm, speed, coolantTemp, fuelLevel, batteryVoltage });
   },
-  // reset clears live display but intentionally does NOT erase the persisted
-  // snapshot — so next app open can hydrate instantly from last session.
+  // reset clears live display and history but intentionally does NOT erase the
+  // persisted snapshot — so next app open can hydrate instantly from last session.
   reset: () =>
     set({
       rpm: empty,
@@ -90,5 +134,10 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
       coolantTemp: empty,
       fuelLevel: empty,
       batteryVoltage: empty,
+      rpmHistory: [],
+      speedHistory: [],
+      coolantTempHistory: [],
+      fuelLevelHistory: [],
+      batteryVoltageHistory: [],
     }),
 }));
