@@ -2,6 +2,11 @@ import { ConfigContext, ExpoConfig } from 'expo/config';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...(config as ExpoConfig),
+  plugins: [
+    ...((config as ExpoConfig).plugins ?? []),
+    'expo-secure-store',
+    'expo-web-browser',
+  ],
   extra: {
     ...(config as ExpoConfig).extra,
     apiUrl: process.env.API_URL ?? 'http://localhost:8000',

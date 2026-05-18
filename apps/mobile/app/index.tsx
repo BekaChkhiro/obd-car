@@ -1,12 +1,7 @@
-import { StatusBar } from 'expo-status-bar';
-import { Text, View } from 'react-native';
+import { Redirect } from 'expo-router';
+import { useAuthStore } from '@/src/store/auth';
 
-export default function HomeScreen() {
-  return (
-    <View className="flex-1 items-center justify-center bg-white">
-      <Text className="text-xl font-bold text-gray-900">OBD-II AI Diagnostic Assistant</Text>
-      <Text className="mt-2 text-gray-500">Connect your ELM327 adapter to get started</Text>
-      <StatusBar style="auto" />
-    </View>
-  );
+export default function IndexRedirect() {
+  const user = useAuthStore((s) => s.user);
+  return <Redirect href={user ? '/(app)/' : '/(auth)/sign-in'} />;
 }
