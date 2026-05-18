@@ -1,0 +1,83 @@
+[
+  {
+    "name": "read_live_pid",
+    "description": "Read a live OBD-II parameter from the vehicle ECU over BLE. Returns the current sensor value with its engineering unit. Supported PIDs: 010C (RPM), 010D (speed km/h), 0105 (coolant °C), 012F (fuel %), 0142 (battery V).",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "pid": {
+          "type": "string",
+          "description": "Four-character hex PID identifier (mode + PID, e.g. \"010C\" for engine RPM).",
+          "enum": [
+            "010C",
+            "010D",
+            "0105",
+            "012F",
+            "0142"
+          ]
+        }
+      },
+      "required": [
+        "pid"
+      ]
+    }
+  },
+  {
+    "name": "read_freeze_frame",
+    "description": "Read a freeze-frame PID (mode 02) snapshot captured at the moment a DTC was stored. Requires a DTC code to identify which freeze frame to read.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "pid": {
+          "type": "string",
+          "description": "PID identifier (e.g. \"020C\" for freeze-frame RPM)."
+        },
+        "dtc_code": {
+          "type": "string",
+          "description": "DTC code associated with the freeze frame (e.g. \"P0300\")."
+        }
+      },
+      "required": [
+        "pid",
+        "dtc_code"
+      ]
+    }
+  },
+  {
+    "name": "read_dtcs",
+    "description": "Retrieve stored Diagnostic Trouble Codes (DTCs) from the vehicle ECU. Returns an array of DTC codes with their categories.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "include_pending": {
+          "type": "boolean",
+          "description": "When true, also fetch pending DTCs (mode 07) in addition to stored DTCs (mode 03). Defaults to false."
+        }
+      }
+    }
+  },
+  {
+    "name": "clear_dtcs",
+    "description": "Clear all stored and pending DTCs from the vehicle ECU (mode 04). IMPORTANT: This is a write operation and requires explicit user confirmation before the backend dispatches it. Never call this tool autonomously without the user asking to clear codes.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "confirmed": {
+          "type": "boolean",
+          "description": "Must be true. Signals that the user explicitly requested the DTC clear."
+        }
+      },
+      "required": [
+        "confirmed"
+      ]
+    }
+  },
+  {
+    "name": "read_vin",
+    "description": "Read the Vehicle Identification Number (VIN) from the ECU using mode 09 PID 02.",
+    "input_schema": {
+      "type": "object",
+      "properties": {}
+    }
+  }
+]
