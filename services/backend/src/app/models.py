@@ -65,6 +65,7 @@ class DiagnosticSession(Base):
         DateTime(timezone=True), default=utcnow, nullable=False
     )
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    context_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     user: Mapped[User] = relationship(back_populates="diagnostic_sessions")
     messages: Mapped[list["Message"]] = relationship(

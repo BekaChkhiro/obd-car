@@ -5,6 +5,8 @@ Thin async layer over the Anthropic SDK that:
   • routes between Sonnet 4.6 (default) and Haiku 4.5 (short clarifications)
   • exposes cache-breakpoint helpers so the system prompt builder (T3.5)
     can mark stable content blocks for prompt caching
+  • tracks per-session token usage and auto-summarizes when approaching the
+    context limit (T3.8)
 
 Downstream tasks (T3.4 tool dispatcher, T3.5 system prompt builder)
 consume `ClaudeClient` and the cache helpers — they do not import the
@@ -17,6 +19,11 @@ from .caching import (
     mark_last_block_cached,
 )
 from .client import ClaudeClient
+from .context import (
+    ConversationContextManager,
+    TokenUsage,
+    build_messages_from_summary,
+)
 from .dispatcher import (
     DEFAULT_MAX_ITERATIONS,
     DEFAULT_MAX_TOOL_RESULT_BYTES,
@@ -41,6 +48,9 @@ from .transport import ToolTransport, ToolTransportError, WebSocketToolTransport
 
 __all__ = [
     "ClaudeClient",
+    "ConversationContextManager",
+    "TokenUsage",
+    "build_messages_from_summary",
     "ClaudeModel",
     "DEFAULT_MAX_ITERATIONS",
     "DEFAULT_MAX_TOOL_RESULT_BYTES",
