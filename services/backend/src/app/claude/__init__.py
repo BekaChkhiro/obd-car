@@ -36,6 +36,7 @@ from .models import (
     ClaudeModel,
     route_model,
 )
+from .prompt import build_system_prompt
 from .transport import ToolTransport, ToolTransportError, WebSocketToolTransport
 
 __all__ = [
@@ -57,6 +58,7 @@ __all__ = [
     "WRITE_TOOLS",
     "WebSocketToolTransport",
     "apply_cache_breakpoint",
+    "build_system_prompt",
     "cache_breakpoint_text",
     "mark_last_block_cached",
     "route_model",
