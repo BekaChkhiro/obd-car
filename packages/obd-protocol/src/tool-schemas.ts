@@ -16,11 +16,12 @@ export interface ToolDefinition {
 
 export const OBD_TOOL_SCHEMAS: readonly ToolDefinition[] = [
   {
-    name: 'read_live_pid',
+    name: 'read_pid',
     description:
       'Read a live OBD-II parameter from the vehicle ECU over BLE. ' +
       'Returns the current sensor value with its engineering unit. ' +
-      'Supported PIDs: 010C (RPM), 010D (speed km/h), 0105 (coolant °C), 012F (fuel %), 0142 (battery V).',
+      'Supported PIDs: 010C (RPM), 010D (speed km/h), 0105 (coolant °C), 012F (fuel %). ' +
+      'For battery voltage use read_battery_voltage instead.',
     input_schema: {
       type: 'object',
       properties: {
@@ -28,10 +29,20 @@ export const OBD_TOOL_SCHEMAS: readonly ToolDefinition[] = [
           type: 'string',
           description:
             'Four-character hex PID identifier (mode + PID, e.g. "010C" for engine RPM).',
-          enum: ['010C', '010D', '0105', '012F', '0142'],
+          enum: ['010C', '010D', '0105', '012F'],
         },
       },
       required: ['pid'],
+    },
+  },
+  {
+    name: 'read_battery_voltage',
+    description:
+      'Read the control-module (battery) voltage from the vehicle ECU (OBD-II PID 0142). ' +
+      'Returns the voltage in volts. Use this instead of read_pid when checking battery health.',
+    input_schema: {
+      type: 'object',
+      properties: {},
     },
   },
   {
