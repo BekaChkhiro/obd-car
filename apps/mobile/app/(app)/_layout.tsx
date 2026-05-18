@@ -12,6 +12,7 @@ export default function AppLayout() {
   return (
     <Stack>
       <Stack.Screen name="index" options={{ title: 'OBD Car' }} />
+      <Stack.Screen name="pair" options={{ title: 'Connect Adapter' }} />
     </Stack>
   );
 }
