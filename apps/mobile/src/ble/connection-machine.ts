@@ -15,6 +15,8 @@ export interface BleStoreInterface {
   setScanning(scanning: boolean): void;
   upsertDevice(device: Device): void;
   clearDevices(): void;
+  /** Returns the user-configured protocol override (0-9), or null for auto-detect. */
+  getProtocolOverride(): number | null;
 }
 
 /**
@@ -90,7 +92,10 @@ export class ConnectionMachine {
       const device = await this.ble.connectToDevice(deviceId);
       await device.discoverAllServicesAndCharacteristics();
 
-      const adapter = await createElm327Client(device);
+      const protocolOverride = this.store.getProtocolOverride();
+      const adapter = await createElm327Client(device, {
+        protocolOverride: protocolOverride ?? undefined,
+      });
       this.adapter = adapter;
 
       // Watch for unexpected BLE-level disconnects so we can auto-reconnect.

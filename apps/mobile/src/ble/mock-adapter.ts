@@ -72,6 +72,9 @@ function buildResponse(command: string, startTime: number): string {
   }
 
   switch (cmd) {
+    case '0100':
+      // Supported PIDs bitmap 0x01-0x20. Reports: coolant (05), RPM (0C), speed (0D), fuel (2F).
+      return '41 00 00 18 80 00\r';
     case '010C':
       return `${encodeRpm(simRpm(elapsed))}\r`;
     case '010D':
@@ -142,5 +145,10 @@ export async function createMockAdapter(
   const transport = new MockElmTransport(options);
   const client = new Elm327Client(transport);
   await client.initialize();
-  return { client, pid: new PidReader(client) };
+  return {
+    client,
+    pid: new PidReader(client),
+    // Mock always acts as auto-detected protocol — no real negotiation needed.
+    negotiatedProtocol: { protocolNumber: 0, protocolName: 'Auto' },
+  };
 }
