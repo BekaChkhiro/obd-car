@@ -40,6 +40,13 @@ export default function HomeScreen() {
       </Pressable>
 
       <Pressable
+        onPress={() => router.push('/(app)/chat')}
+        className="mt-3 rounded-xl bg-indigo-600 px-6 py-3"
+      >
+        <Text className="text-sm font-medium text-white">AI Assistant</Text>
+      </Pressable>
+
+      <Pressable
         onPress={logout}
         className="mt-4 rounded-xl border border-gray-300 px-6 py-3"
       >
