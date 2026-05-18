@@ -12,6 +12,7 @@ from .auth.routes import router as auth_router
 from .config import settings
 from .db import init_db
 from .logging import configure_logging
+from .ws.routes import router as ws_router
 
 configure_logging()
 
@@ -40,6 +41,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
+app.include_router(ws_router)
 
 
 @app.get("/health")
