@@ -18,13 +18,23 @@ class Settings(BaseSettings):
 
     # JWT
     jwt_secret: str = ""
+    jwt_algorithm: str = "HS256"
+    jwt_access_ttl_minutes: int = 15
+    jwt_refresh_ttl_days: int = 30
 
     # Google OAuth — server-side client ID for ID-token verification
     google_client_id: str = ""
 
+    # Rate limits — applied to /auth/* endpoints
+    auth_rate_limit: str = "10/minute"
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    @property
+    def database_url(self) -> str:
+        return f"sqlite+aiosqlite:///{self.db_path}"
 
 
 settings = Settings()
