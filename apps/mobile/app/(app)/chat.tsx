@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   FlatList,
@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChatStore } from '@/src/store/chat';
+import { useAuthStore } from '@/src/store/auth';
+import { getAccessToken } from '@/src/lib/api';
 import { MarkdownText } from '@/src/components/MarkdownText';
 import { ToolCallBadge } from '@/src/components/ToolCallBadge';
 import type { ChatMessage } from '@/src/types/chat';
@@ -125,7 +127,15 @@ function EmptyChat({ onSend }: { onSend: (text: string) => void }) {
   );
 }
 
-function InputBar({ onSend, onAbort }: { onSend: (text: string) => void; onAbort: () => void }) {
+function InputBar({
+  onSend,
+  onAbort,
+  disabled,
+}: {
+  onSend: (text: string) => void;
+  onAbort: () => void;
+  disabled: boolean;
+}) {
   const [text, setText] = useState('');
   const isStreaming = useChatStore((s) => s.isStreaming);
   const messages = useChatStore((s) => s.messages);
@@ -133,7 +143,7 @@ function InputBar({ onSend, onAbort }: { onSend: (text: string) => void; onAbort
   const insets = useSafeAreaInsets();
 
   const overLimit = text.length > MAX_CHARS;
-  const canSend = text.trim().length > 0 && !isStreaming && !overLimit;
+  const canSend = text.trim().length > 0 && !isStreaming && !overLimit && !disabled;
 
   const handleSend = () => {
     if (!canSend) return;
@@ -190,12 +200,46 @@ function renderMessage({ item }: ListRenderItemInfo<ChatMessage>) {
   return <MessageBubble msg={item} />;
 }
 
+function ConnectionBanner({ status }: { status: string }) {
+  if (status === 'connected' || status === 'idle') return null;
+  const label =
+    status === 'connecting'
+      ? 'Connecting…'
+      : status === 'reconnecting'
+        ? 'Reconnecting…'
+        : 'Disconnected';
+  return (
+    <View className="bg-amber-900/40 px-4 py-1">
+      <Text className="text-center text-xs text-amber-200">{label}</Text>
+    </View>
+  );
+}
+
 export default function ChatScreen() {
   const messages = useChatStore((s) => s.messages);
   const isStreaming = useChatStore((s) => s.isStreaming);
-  const addMessage = useChatStore((s) => s.addMessage);
-  const setStreaming = useChatStore((s) => s.setStreaming);
+  const connection = useChatStore((s) => s.connection);
+  const connect = useChatStore((s) => s.connect);
+  const disconnect = useChatStore((s) => s.disconnect);
+  const sendUserMessage = useChatStore((s) => s.sendUserMessage);
+  const abort = useChatStore((s) => s.abort);
+  const user = useAuthStore((s) => s.user);
   const listRef = useRef<FlatList<ChatMessage>>(null);
+
+  // Single session per chat session in the app — id is stable for the lifetime
+  // of this screen mount, so backend can replay frames on reconnect.
+  const sessionId = useMemo(
+    () => `chat-${Math.random().toString(36).slice(2, 10)}-${Date.now().toString(36)}`,
+    [],
+  );
+
+  useEffect(() => {
+    const token = getAccessToken();
+    if (token) {
+      connect({ token, sessionId, locale: user?.locale ?? 'en' });
+    }
+    return () => disconnect();
+  }, [connect, disconnect, sessionId, user?.locale]);
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -205,19 +249,10 @@ export default function ChatScreen() {
 
   const handleSend = useCallback(
     (text: string) => {
-      addMessage({
-        id: Math.random().toString(36).slice(2) + Date.now().toString(36),
-        role: 'user',
-        content: text,
-        createdAt: new Date().toISOString(),
-      });
+      sendUserMessage(text);
     },
-    [addMessage],
+    [sendUserMessage],
   );
-
-  const handleAbort = useCallback(() => {
-    setStreaming(false);
-  }, [setStreaming]);
 
   return (
     <KeyboardAvoidingView
@@ -225,6 +260,7 @@ export default function ChatScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={90}
     >
+      <ConnectionBanner status={connection} />
       {messages.length === 0 ? (
         <EmptyChat onSend={handleSend} />
       ) : (
@@ -239,7 +275,11 @@ export default function ChatScreen() {
         />
       )}
 
-      <InputBar onSend={handleSend} onAbort={handleAbort} />
+      <InputBar
+        onSend={handleSend}
+        onAbort={abort}
+        disabled={connection !== 'connected'}
+      />
     </KeyboardAvoidingView>
   );
 }

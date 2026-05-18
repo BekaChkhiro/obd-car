@@ -17,6 +17,10 @@ export async function hydrateTokens(): Promise<void> {
   refreshToken = stored.refresh;
 }
 
+export function getAccessToken(): string | null {
+  return accessToken;
+}
+
 export function setInMemoryTokens(access: string, refresh: string): void {
   accessToken = access;
   refreshToken = refresh;
