@@ -33,6 +33,13 @@ export default function HomeScreen() {
       ) : null}
 
       <Pressable
+        onPress={() => router.push('/(app)/dashboard')}
+        className="mt-3 rounded-xl bg-gray-900 px-6 py-3"
+      >
+        <Text className="text-sm font-medium text-white">Open Dashboard</Text>
+      </Pressable>
+
+      <Pressable
         onPress={logout}
         className="mt-4 rounded-xl border border-gray-300 px-6 py-3"
       >
