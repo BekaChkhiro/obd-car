@@ -1,0 +1,31 @@
+{
+  "cli": {
+    "version": ">= 16.0.0"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "API_URL": "http://localhost:8000",
+        "WS_URL": "ws://localhost:8000"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "env": {
+        "API_URL": "https://api-preview.obd-car.example.com",
+        "WS_URL": "wss://api-preview.obd-car.example.com"
+      }
+    },
+    "production": {
+      "env": {
+        "API_URL": "https://api.obd-car.example.com",
+        "WS_URL": "wss://api.obd-car.example.com"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
