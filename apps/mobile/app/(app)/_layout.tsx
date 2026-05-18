@@ -15,6 +15,7 @@ export default function AppLayout() {
       <Stack.Screen name="pair" options={{ title: 'Connect Adapter' }} />
       <Stack.Screen name="dashboard" options={{ title: 'Dashboard' }} />
       <Stack.Screen name="threshold-settings" options={{ title: 'Alert Thresholds' }} />
+      <Stack.Screen name="chat" options={{ title: 'AI Assistant' }} />
     </Stack>
   );
 }
