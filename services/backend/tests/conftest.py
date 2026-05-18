@@ -6,9 +6,7 @@ from collections.abc import AsyncIterator
 import pytest
 
 # Configure auth settings BEFORE importing the app so Settings() picks them up.
-os.environ.setdefault(
-    "JWT_SECRET", "test-secret-do-not-use-in-prod-needs-32-bytes-minimum"
-)
+os.environ.setdefault("JWT_SECRET", "test-secret-do-not-use-in-prod-needs-32-bytes-minimum")
 os.environ.setdefault("GOOGLE_CLIENT_ID", "test-google-client-id")
 os.environ.setdefault("AUTH_RATE_LIMIT", "1000/minute")
 os.environ.setdefault("DB_PATH", ":memory:")

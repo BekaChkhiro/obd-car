@@ -1,4 +1,5 @@
 """Auth helpers shared between routes — token issuance + refresh rotation."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime

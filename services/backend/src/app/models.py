@@ -16,9 +16,13 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     email: Mapped[str] = mapped_column(String(320), unique=True, index=True, nullable=False)
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    google_sub: Mapped[str | None] = mapped_column(String(255), unique=True, index=True, nullable=True)
+    google_sub: Mapped[str | None] = mapped_column(
+        String(255), unique=True, index=True, nullable=True
+    )
     locale: Mapped[str] = mapped_column(String(16), default="en", nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
 
     refresh_tokens: Mapped[list["RefreshToken"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
@@ -36,6 +40,8 @@ class RefreshToken(Base):
     token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
 
     user: Mapped[User] = relationship(back_populates="refresh_tokens")

@@ -30,3 +30,16 @@ dev = [
 asyncio_mode = "auto"
 testpaths = ["tests"]
 pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = [".venv", "db"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "W"]
+# B008 — FastAPI uses `Depends()` as default argument by design.
+ignore = ["E501", "B008"]
+
+[tool.ruff.format]
+quote-style = "double"
