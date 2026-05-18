@@ -38,9 +38,13 @@ async def register(
     session: AsyncSession = Depends(get_session),
 ) -> AuthResponse:
     email = body.email.lower()
-    existing = (await session.execute(select(User).where(User.email == email))).scalar_one_or_none()
+    existing = (
+        await session.execute(select(User).where(User.email == email))
+    ).scalar_one_or_none()
     if existing is not None:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="email already registered")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="email already registered"
+        )
 
     user = User(
         email=email,
@@ -61,7 +65,9 @@ async def login(
     session: AsyncSession = Depends(get_session),
 ) -> AuthResponse:
     email = body.email.lower()
-    user = (await session.execute(select(User).where(User.email == email))).scalar_one_or_none()
+    user = (
+        await session.execute(select(User).where(User.email == email))
+    ).scalar_one_or_none()
     if user is None or not user.password_hash:
         raise _bad_credentials()
     if not verify_password(body.password, user.password_hash):
@@ -89,10 +95,14 @@ async def google_sign_in(
     email = claims["email"].lower()
     locale = claims.get("locale") or "en"
 
-    user = (await session.execute(select(User).where(User.google_sub == sub))).scalar_one_or_none()
+    user = (
+        await session.execute(select(User).where(User.google_sub == sub))
+    ).scalar_one_or_none()
     if user is None:
         # Link to existing email-registered account if present, else create.
-        user = (await session.execute(select(User).where(User.email == email))).scalar_one_or_none()
+        user = (
+            await session.execute(select(User).where(User.email == email))
+        ).scalar_one_or_none()
         if user is None:
             user = User(email=email, google_sub=sub, locale=locale)
             session.add(user)
@@ -115,7 +125,9 @@ async def refresh(
     try:
         user = await consume_refresh_token(session, body.refresh_token)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)
+        ) from exc
 
     return await issue_token_pair(session, user)
 
