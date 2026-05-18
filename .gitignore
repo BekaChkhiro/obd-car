@@ -75,3 +75,4 @@ coverage/
 # Misc
 .cache/
 .turbo/
+.planflow/worktrees.json
