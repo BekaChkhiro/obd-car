@@ -12,6 +12,7 @@ import {
 import { useRouter } from 'expo-router';
 import { State } from 'react-native-ble-plx';
 import { bleManager } from '@/src/ble/manager';
+import { connectionMachine } from '@/src/ble/connection';
 import { useBleStore, type ScannedDevice } from '@/src/store/ble';
 
 async function requestAndroidBlePermissions(): Promise<boolean> {
@@ -43,9 +44,11 @@ interface DeviceRowProps {
   device: ScannedDevice;
   onConnect: (id: string) => void;
   isConnected: boolean;
+  isConnecting: boolean;
 }
 
-function DeviceRow({ device, onConnect, isConnected }: DeviceRowProps) {
+function DeviceRow({ device, onConnect, isConnected, isConnecting }: DeviceRowProps) {
+  const busy = isConnected || isConnecting;
   return (
     <View className="mx-4 mb-3 rounded-xl border border-gray-200 bg-white px-4 py-3">
       <View className="flex-row items-center justify-between">
@@ -59,12 +62,16 @@ function DeviceRow({ device, onConnect, isConnected }: DeviceRowProps) {
           <Text className="mt-0.5 text-xs text-blue-500">{rssiLabel(device.rssi)}</Text>
         </View>
         <Pressable
-          onPress={() => onConnect(device.id)}
-          className={`rounded-lg px-3 py-2 ${isConnected ? 'bg-green-100' : 'bg-blue-600'}`}
+          onPress={() => !busy && onConnect(device.id)}
+          className={`rounded-lg px-3 py-2 ${isConnected ? 'bg-green-100' : isConnecting ? 'bg-yellow-100' : 'bg-blue-600'}`}
         >
-          <Text className={`text-xs font-medium ${isConnected ? 'text-green-700' : 'text-white'}`}>
-            {isConnected ? 'Connected' : 'Connect'}
-          </Text>
+          {isConnecting ? (
+            <ActivityIndicator size="small" color="#ca8a04" />
+          ) : (
+            <Text className={`text-xs font-medium ${isConnected ? 'text-green-700' : 'text-white'}`}>
+              {isConnected ? 'Connected' : 'Connect'}
+            </Text>
+          )}
         </Pressable>
       </View>
     </View>
@@ -73,38 +80,22 @@ function DeviceRow({ device, onConnect, isConnected }: DeviceRowProps) {
 
 export default function PairScreen() {
   const router = useRouter();
-  const { isScanning, permissionGranted, devices, connectedDeviceId } = useBleStore();
-  const { setScanning, setPermissionGranted, upsertDevice, clearDevices, setConnectedDeviceId } =
+  const { connectionPhase, connectionError, retryCount, permissionGranted, devices, connectedDeviceId } =
     useBleStore();
+  const { setPermissionGranted } = useBleStore();
+
+  const isScanning = connectionPhase === 'scanning';
+  const isConnecting = connectionPhase === 'connecting';
 
   const startScan = useCallback(() => {
-    clearDevices();
-    setScanning(true);
-    bleManager.startDeviceScan(null, { allowDuplicates: true }, (error, device) => {
-      if (error) {
-        setScanning(false);
-        Alert.alert('Scan error', error.message);
-        return;
-      }
-      if (device) upsertDevice(device);
-    });
-
-    const timer = setTimeout(() => {
-      bleManager.stopDeviceScan();
-      setScanning(false);
-    }, 15000);
-
-    return timer;
-  }, [clearDevices, setScanning, upsertDevice]);
+    connectionMachine.startScan();
+  }, []);
 
   const stopScan = useCallback(() => {
-    bleManager.stopDeviceScan();
-    setScanning(false);
-  }, [setScanning]);
+    connectionMachine.stopScan();
+  }, []);
 
   useEffect(() => {
-    let scanTimer: ReturnType<typeof setTimeout> | null = null;
-
     async function init() {
       const granted = await requestAndroidBlePermissions();
       setPermissionGranted(granted);
@@ -123,32 +114,34 @@ export default function PairScreen() {
         return;
       }
 
-      scanTimer = startScan();
+      startScan();
     }
 
     init();
 
     return () => {
-      bleManager.stopDeviceScan();
-      setScanning(false);
-      if (scanTimer) clearTimeout(scanTimer);
+      connectionMachine.stopScan();
     };
-  }, [setPermissionGranted, setScanning, startScan]);
+  }, [setPermissionGranted, startScan]);
 
   async function handleConnect(deviceId: string) {
     stopScan();
     try {
-      const device = await bleManager.connectToDevice(deviceId);
-      await device.discoverAllServicesAndCharacteristics();
-      setConnectedDeviceId(device.id);
-      Alert.alert('Connected', `Connected to ${device.name ?? device.id}`, [
+      await connectionMachine.connect(deviceId);
+      Alert.alert('Connected', `Connected to ${deviceId}`, [
         { text: 'OK', onPress: () => router.back() },
       ]);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      Alert.alert('Connection failed', msg);
+    } catch {
+      // connectionMachine updates the store; error message is in connectionError
     }
   }
+
+  // Show connection error as an alert (only for user-triggered connects, not background retries)
+  useEffect(() => {
+    if (connectionPhase === 'error' && connectionError && retryCount === 0) {
+      Alert.alert('Connection failed', connectionError);
+    }
+  }, [connectionPhase, connectionError, retryCount]);
 
   return (
     <View className="flex-1 bg-gray-50">
@@ -166,6 +159,15 @@ export default function PairScreen() {
               <ActivityIndicator size="small" color="#2563eb" />
               <Text className="ml-2 text-sm text-blue-600">Scanning…</Text>
             </View>
+          ) : isConnecting ? (
+            <View className="flex-row items-center gap-2">
+              <ActivityIndicator size="small" color="#ca8a04" />
+              <Text className="ml-2 text-sm text-yellow-600">Connecting…</Text>
+            </View>
+          ) : connectionPhase === 'error' && retryCount > 0 ? (
+            <Text className="text-sm text-orange-600">
+              Reconnecting… (attempt {retryCount})
+            </Text>
           ) : (
             <Text className="text-sm text-gray-600">
               {devices.length === 0 ? 'No devices found' : `${devices.length} device(s) found`}
@@ -177,9 +179,10 @@ export default function PairScreen() {
         </View>
         <Pressable
           onPress={isScanning ? stopScan : () => startScan()}
-          className={`rounded-lg px-4 py-2 ${isScanning ? 'bg-gray-200' : 'bg-blue-600'}`}
+          disabled={isConnecting}
+          className={`rounded-lg px-4 py-2 ${isScanning ? 'bg-gray-200' : isConnecting ? 'bg-gray-100' : 'bg-blue-600'}`}
         >
-          <Text className={`text-sm font-medium ${isScanning ? 'text-gray-700' : 'text-white'}`}>
+          <Text className={`text-sm font-medium ${isScanning ? 'text-gray-700' : isConnecting ? 'text-gray-400' : 'text-white'}`}>
             {isScanning ? 'Stop' : 'Scan'}
           </Text>
         </Pressable>
@@ -193,10 +196,11 @@ export default function PairScreen() {
             device={item}
             onConnect={handleConnect}
             isConnected={connectedDeviceId === item.id}
+            isConnecting={isConnecting && connectedDeviceId !== item.id}
           />
         )}
         ListEmptyComponent={
-          !isScanning ? (
+          !isScanning && !isConnecting ? (
             <View className="mt-12 items-center px-8">
               <Text className="text-center text-sm text-gray-400">
                 No Bluetooth devices discovered. Tap Scan to search again.
