@@ -3,7 +3,8 @@
   "compilerOptions": {
     "strict": true,
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@obd-car/obd-protocol": ["../../packages/obd-protocol/src/index.ts"]
     }
   },
   "include": [

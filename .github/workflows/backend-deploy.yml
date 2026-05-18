@@ -1,0 +1,49 @@
+name: Backend Deploy
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'services/backend/**'
+      - '.github/workflows/backend-deploy.yml'
+  workflow_dispatch:
+
+# Avoid overlapping deploys racing the same Fly machine + SQLite volume.
+concurrency:
+  group: backend-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Fly.io deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: production
+      url: https://obd-ai-backend.fly.dev
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Fly.io CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy to Fly.io
+        working-directory: services/backend
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: flyctl deploy --remote-only --config fly.toml
+
+      - name: Smoke check /health
+        run: |
+          for i in 1 2 3 4 5 6; do
+            if curl -fsS --max-time 5 https://obd-ai-backend.fly.dev/health; then
+              echo
+              echo "health OK"
+              exit 0
+            fi
+            echo "attempt $i: health not ready yet, retrying..."
+            sleep 10
+          done
+          echo "health check failed"
+          exit 1
