@@ -6,7 +6,8 @@
 #   fly secrets set \
 #     ANTHROPIC_API_KEY=... \
 #     JWT_SECRET=... \
-#     GOOGLE_CLIENT_ID=...
+#     GOOGLE_CLIENT_ID=... \
+#     CORS_ORIGINS=https://your-app.example.com  # comma-separated for multiple
 #
 # Deploy:
 #   fly deploy --config fly.toml
@@ -21,8 +22,9 @@ primary_region = "fra"
   APP_ENV = "production"
   LOG_LEVEL = "INFO"
   DB_PATH = "/data/obd.db"
-  # CORS — override per environment with `fly secrets set CORS_ORIGINS=...`
-  CORS_ORIGINS = "https://app.example.com"
+  # CORS_ORIGINS is intentionally NOT set here — it must be provided via
+  # `fly secrets set CORS_ORIGINS=...` so the prod allowlist is never
+  # committed to the repo and can't accidentally fall back to a placeholder.
 
 # Persistent volume — SQLite lives here. Without this, Fly's rootfs is
 # ephemeral and the database is wiped on every restart/deploy.
