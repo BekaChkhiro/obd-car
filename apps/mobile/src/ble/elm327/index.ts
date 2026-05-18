@@ -19,4 +19,7 @@ export {
   ELM_INIT_COMMANDS,
   type Elm327ClientOptions,
   type SendCommandOptions,
+  type QueuePriority,
+  type QueueStats,
+  type EnqueueOptions,
 } from './client';

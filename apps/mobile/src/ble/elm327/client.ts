@@ -1,7 +1,10 @@
+import { CommandQueue, type EnqueueOptions, type QueueStats } from '../command-queue';
 import { Elm327Error } from './errors';
 import { ResponseFramer } from './framer';
 import { cleanFrame, parseObdResponse, type ParsedObdResponse } from './parser';
 import type { ElmTransport } from './transport';
+
+export type { QueuePriority, QueueStats, EnqueueOptions } from '../command-queue';
 
 export interface Elm327ClientOptions {
   defaultTimeoutMs?: number;
@@ -13,6 +16,14 @@ export interface SendCommandOptions {
   timeoutMs?: number;
   retries?: number;
   ignoreEmpty?: boolean;
+  /** 'high' bypasses pause() and runs before any 'normal' items. Default: 'normal'. */
+  priority?: EnqueueOptions['priority'];
+  /**
+   * When set, concurrent calls with the same key share one in-flight Promise.
+   * Useful for dashboard PID polling: duplicate reads within a round-trip
+   * collapse into a single command on the wire.
+   */
+  coalesceKey?: string;
 }
 
 const DEFAULT_TIMEOUT_MS = 4000;
@@ -44,7 +55,7 @@ export class Elm327Client {
   private framer = new ResponseFramer();
   private unsubscribe: (() => void) | null = null;
   private pending: PendingRequest | null = null;
-  private inFlight: Promise<unknown> = Promise.resolve();
+  private queue = new CommandQueue();
   private initialized = false;
 
   private readonly defaultTimeoutMs: number;
@@ -64,7 +75,8 @@ export class Elm327Client {
     this.attachListener();
     for (const cmd of ELM_INIT_COMMANDS) {
       // ATZ takes longer than later commands; give the whole init a generous budget.
-      await this.sendRaw(cmd, { timeoutMs: this.initTimeoutMs, retries: 0 });
+      // High priority so init is never blocked by a paused queue.
+      await this.sendRaw(cmd, { timeoutMs: this.initTimeoutMs, retries: 0, priority: 'high' });
     }
     this.initialized = true;
   }
@@ -88,7 +100,23 @@ export class Elm327Client {
     return parseObdResponse(frame, mode, pid);
   }
 
+  /** Pause normal-priority commands. High-priority (AI tool calls) still run. */
+  pauseQueue(): void {
+    this.queue.pause();
+  }
+
+  /** Resume normal-priority commands after a pause. */
+  resumeQueue(): void {
+    this.queue.resume();
+  }
+
+  /** Queue depth and last-command round-trip time for UI diagnostics. */
+  getQueueStats(): QueueStats {
+    return this.queue.getStats();
+  }
+
   async close(): Promise<void> {
+    this.queue.cancelAll(new Elm327Error('transport', 'Client closed'));
     if (this.pending) {
       clearTimeout(this.pending.timer);
       this.pending.reject(new Elm327Error('transport', 'Client closed'));
@@ -127,6 +155,8 @@ export class Elm327Client {
   private sendRaw(command: string, options: SendCommandOptions): Promise<string> {
     const timeoutMs = options.timeoutMs ?? this.defaultTimeoutMs;
     const retries = options.retries ?? this.defaultRetries;
+    const priority = options.priority ?? 'normal';
+    const coalesceKey = options.coalesceKey;
 
     const run = async (): Promise<string> => {
       let attempt = 0;
@@ -143,9 +173,7 @@ export class Elm327Client {
       throw lastError ?? new Elm327Error('protocol', 'Retry budget exhausted', { command });
     };
 
-    const next = this.inFlight.then(run, run);
-    this.inFlight = next.catch(() => undefined);
-    return next;
+    return this.queue.enqueue(run, { priority, coalesceKey });
   }
 
   private dispatch(command: string, timeoutMs: number): Promise<string> {
