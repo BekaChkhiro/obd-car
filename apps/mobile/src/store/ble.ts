@@ -26,6 +26,13 @@ interface BleState {
   /** Convenience alias — true when connectionPhase === 'scanning'. */
   isScanning: boolean;
 
+  /**
+   * Manual OBD protocol override (0-9, where 0 = auto-detect).
+   * null means use the automatic probe sequence.
+   * Set by the user in settings for stubborn ECUs (ISO 9141, some Korean/Asian vehicles).
+   */
+  protocolOverride: number | null;
+
   setConnectionPhase: (phase: ConnectionPhase) => void;
   setConnectionError: (error: string | null) => void;
   setRetryCount: (count: number) => void;
@@ -35,6 +42,7 @@ interface BleState {
   setConnectedDeviceId: (id: string | null) => void;
   /** @deprecated Use setConnectionPhase('scanning' | 'disconnected') via ConnectionMachine. */
   setScanning: (scanning: boolean) => void;
+  setProtocolOverride: (override: number | null) => void;
 }
 
 export const useBleStore = create<BleState>((set) => ({
@@ -45,6 +53,7 @@ export const useBleStore = create<BleState>((set) => ({
   devices: [],
   connectedDeviceId: null,
   isScanning: false,
+  protocolOverride: null,
 
   setConnectionPhase: (phase) =>
     set({ connectionPhase: phase, isScanning: phase === 'scanning' }),
@@ -76,4 +85,6 @@ export const useBleStore = create<BleState>((set) => ({
       isScanning: scanning,
       connectionPhase: scanning ? 'scanning' : state.connectionPhase === 'scanning' ? 'disconnected' : state.connectionPhase,
     })),
+
+  setProtocolOverride: (override) => set({ protocolOverride: override }),
 }));

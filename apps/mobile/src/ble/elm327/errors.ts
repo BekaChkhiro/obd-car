@@ -10,7 +10,8 @@ export type Elm327ErrorKind =
   | 'unknown-command'
   | 'protocol'
   | 'transport'
-  | 'not-initialized';
+  | 'not-initialized'
+  | 'no-protocol';
 
 export class Elm327Error extends Error {
   readonly kind: Elm327ErrorKind;
