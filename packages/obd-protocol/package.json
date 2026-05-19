@@ -8,10 +8,12 @@
   "types": "./src/index.ts",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "generate": "tsx scripts/emit-schema.ts"
+    "generate": "tsx scripts/emit-schema.ts",
+    "test": "vitest run"
   },
   "devDependencies": {
     "tsx": "^4.19.2",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "vitest": "^4.1.6"
   }
 }
