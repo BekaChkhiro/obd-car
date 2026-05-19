@@ -1,4 +1,4 @@
-export { DB_NAME, getDb, SQLiteProvider, useSQLiteContext } from './database';
+export { clearDb, DB_NAME, getDb, SQLiteProvider, useSQLiteContext } from './database';
 export { runMigrations } from './migrations';
 export type {
   Message,

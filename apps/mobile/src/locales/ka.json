@@ -75,6 +75,12 @@
     "connect": "დაკავშირება",
     "disconnect": "გათიშვა"
   },
+  "settings": {
+    "deleteAccount": "ანგარიშის წაშლა",
+    "deleteAccountConfirmTitle": "ანგარიშის წაშლა",
+    "deleteAccountConfirmMessage": "ეს სამუდამოდ წაშლის თქვენს ანგარიშს და ყველა დაკავშირებულ მონაცემს. ეს მოქმედება შეუქცევადია.",
+    "deleteAccountError": "ანგარიშის წაშლა ვერ მოხერხდა. გთხოვთ სცადოთ ხელახლა."
+  },
   "onboarding": {
     "step": "ნაბიჯი {{current}} / {{total}}",
     "welcome": {

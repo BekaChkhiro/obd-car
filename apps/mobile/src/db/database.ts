@@ -1,4 +1,4 @@
-import { openDatabaseAsync, type SQLiteDatabase } from 'expo-sqlite';
+import { deleteDatabaseAsync, openDatabaseAsync, type SQLiteDatabase } from 'expo-sqlite';
 import { runMigrations } from './migrations';
 
 export { SQLiteProvider, useSQLiteContext } from 'expo-sqlite';
@@ -12,4 +12,12 @@ export async function getDb(): Promise<SQLiteDatabase> {
   _db = await openDatabaseAsync(DB_NAME);
   await runMigrations(_db);
   return _db;
+}
+
+export async function clearDb(): Promise<void> {
+  if (_db) {
+    await _db.closeAsync();
+    _db = null;
+  }
+  await deleteDatabaseAsync(DB_NAME);
 }

@@ -1,4 +1,4 @@
-import { Pressable, Text, View } from 'react-native';
+import { Alert, Pressable, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -33,8 +33,27 @@ function LanguageSwitcher() {
 export default function HomeScreen() {
   const router = useRouter();
   const { t } = useTranslation();
-  const { user, logout } = useAuthStore();
+  const { user, logout, deleteAccount } = useAuthStore();
   const connectedDeviceId = useBleStore((s) => s.connectedDeviceId);
+
+  function handleDeleteAccount(): void {
+    Alert.alert(
+      t('settings.deleteAccountConfirmTitle'),
+      t('settings.deleteAccountConfirmMessage'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('settings.deleteAccount'),
+          style: 'destructive',
+          onPress: () => {
+            deleteAccount().catch(() => {
+              Alert.alert(t('common.error'), t('settings.deleteAccountError'));
+            });
+          },
+        },
+      ],
+    );
+  }
 
   return (
     <View className="flex-1 items-center justify-center bg-white px-6">
@@ -85,6 +104,13 @@ export default function HomeScreen() {
         className="mt-4 rounded-xl border border-gray-300 px-6 py-3"
       >
         <Text className="text-sm font-medium text-gray-700">{t('home.signOut')}</Text>
+      </Pressable>
+
+      <Pressable
+        onPress={handleDeleteAccount}
+        className="mt-3 rounded-xl border border-red-500 px-6 py-3"
+      >
+        <Text className="text-sm font-medium text-red-500">{t('settings.deleteAccount')}</Text>
       </Pressable>
 
       <LanguageSwitcher />

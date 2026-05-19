@@ -93,6 +93,7 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
     throw new ApiError(res.status, detail);
   }
 
+  if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }
 
@@ -124,4 +125,7 @@ export const authApi = {
       method: 'POST',
       body: JSON.stringify({ id_token: idToken }),
     }),
+
+  deleteAccount: (): Promise<void> =>
+    apiFetch<void>('/auth/me', { method: 'DELETE' }),
 };
