@@ -109,4 +109,16 @@ export const OBD_TOOL_SCHEMAS: readonly ToolDefinition[] = [
       properties: {},
     },
   },
+  {
+    name: 'read_permanent_dtcs',
+    description:
+      'Retrieve permanent Diagnostic Trouble Codes (DTCs) from the vehicle ECU (OBD-II mode 0x0A). ' +
+      'Permanent DTCs cannot be cleared by the user — the ECU only removes them after it self-verifies ' +
+      'the fault has been resolved through a complete drive cycle. ' +
+      'Surface these alongside regular DTCs to give the user a complete picture of ECU health.',
+    input_schema: {
+      type: 'object',
+      properties: {},
+    },
+  },
 ] as const;

@@ -88,3 +88,80 @@ export function parseDtcFrame(frame: string, isPending: boolean): Dtc[] {
 
   return dtcs;
 }
+
+/**
+ * Parse a raw ELM327 response frame for mode 0x0A (permanent DTCs) into an
+ * array of Dtc objects. Permanent DTCs use echo byte 0x4A and are marked with
+ * `isPermanent: true`. The ECU only clears these after self-verifying the fix
+ * through a drive cycle — they cannot be cleared with mode 0x04.
+ */
+export function parsePermaDtcFrame(frame: string): Dtc[] {
+  const cleaned = frame.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!cleaned || ELM_NO_DATA_RE.test(cleaned)) return [];
+
+  const stripped = cleaned.replace(/\b[0-9A-Fa-f]:\s*/g, ' ');
+
+  const tokens = stripped.split(/\s+/).flatMap((tok) => {
+    if (/^[0-9A-Fa-f]{2}$/.test(tok)) return [tok];
+    if (/^[0-9A-Fa-f]+$/.test(tok) && tok.length % 2 === 0) {
+      const pairs: string[] = [];
+      for (let i = 0; i < tok.length; i += 2) pairs.push(tok.slice(i, i + 2));
+      return pairs;
+    }
+    return [];
+  });
+
+  if (tokens.length === 0) return [];
+  const bytes = tokens.map((t) => parseInt(t, 16));
+
+  if (bytes[0] !== 0x4a) return [];
+
+  const dtcBytes = bytes.slice(1);
+  const dtcs: Dtc[] = [];
+
+  for (let i = 0; i + 1 < dtcBytes.length; i += 2) {
+    const a = dtcBytes[i]!;
+    const b = dtcBytes[i + 1]!;
+    if (a === 0 && b === 0) continue;
+    const dtc = dtcFromBytes(a, b);
+    dtcs.push({ ...dtc, isPending: false, isPermanent: true });
+  }
+
+  return dtcs;
+}
+
+/**
+ * Parse a raw ELM327 response for mode 0x09 PID 0x02 (VIN request).
+ *
+ * Expected format: `49 02 01 <17 ASCII VIN bytes>`
+ * Handles space-separated, compact, and multi-line CAN ISO-TP responses.
+ * Returns the 17-character VIN string, or null on malformed/no-data responses.
+ */
+export function parseVinFrame(frame: string): string | null {
+  const cleaned = frame.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!cleaned || ELM_NO_DATA_RE.test(cleaned)) return null;
+
+  const stripped = cleaned.replace(/\b[0-9A-Fa-f]:\s*/g, ' ');
+
+  const tokens = stripped.split(/\s+/).flatMap((tok) => {
+    if (/^[0-9A-Fa-f]{2}$/.test(tok)) return [tok];
+    if (/^[0-9A-Fa-f]+$/.test(tok) && tok.length % 2 === 0) {
+      const pairs: string[] = [];
+      for (let i = 0; i < tok.length; i += 2) pairs.push(tok.slice(i, i + 2));
+      return pairs;
+    }
+    return [];
+  });
+
+  if (tokens.length === 0) return null;
+  const bytes = tokens.map((t) => parseInt(t, 16));
+
+  // Expect mode echo 0x49, PID echo 0x02
+  if (bytes[0] !== 0x49 || bytes[1] !== 0x02) return null;
+
+  // bytes[2] is the message count byte — skip it, then read ASCII VIN chars
+  const vinBytes = bytes.slice(3).filter((b) => b >= 0x20 && b <= 0x7e);
+  const vin = String.fromCharCode(...vinBytes).trim();
+
+  return vin.length > 0 ? vin : null;
+}
