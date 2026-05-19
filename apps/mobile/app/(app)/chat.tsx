@@ -11,8 +11,9 @@ import {
   type ListRenderItemInfo,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useChatStore } from '@/src/store/chat';
-import { useAuthStore } from '@/src/store/auth';
+import { useLocaleStore } from '@/src/store/locale';
 import { getAccessToken } from '@/src/lib/api';
 import { MarkdownText } from '@/src/components/MarkdownText';
 import { PidWidget } from '@/src/components/PidWidget';
@@ -20,12 +21,6 @@ import { ToolCallBadge } from '@/src/components/ToolCallBadge';
 import { WriteConfirmModal } from '@/src/components/WriteConfirmModal';
 import { useToolExecutor } from '@/src/hooks/useToolExecutor';
 import type { ChatMessage } from '@/src/types/chat';
-
-const QUICK_PROMPTS = [
-  'რა შეცდომა გვაქვს?',
-  'ბატარეა როგორ არის?',
-  'ძრავი რატომ ცხელდება?',
-];
 
 const MAX_CHARS = 1000;
 
@@ -118,14 +113,15 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
 }
 
 function EmptyChat({ onSend }: { onSend: (text: string) => void }) {
+  const { t } = useTranslation();
+  const quickPrompts = [t('chat.quickPrompt0'), t('chat.quickPrompt1'), t('chat.quickPrompt2')];
+
   return (
     <View className="flex-1 items-center justify-center px-8">
-      <Text className="text-center text-2xl font-bold text-white">OBD AI Assistant</Text>
-      <Text className="mt-2 text-center text-sm text-gray-500">
-        Ask about your vehicle — diagnostics, error codes, live sensor data.
-      </Text>
+      <Text className="text-center text-2xl font-bold text-white">{t('chat.title')}</Text>
+      <Text className="mt-2 text-center text-sm text-gray-500">{t('chat.subtitle')}</Text>
       <View className="mt-6 gap-2 self-stretch">
-        {QUICK_PROMPTS.map((prompt) => (
+        {quickPrompts.map((prompt) => (
           <Pressable
             key={prompt}
             onPress={() => onSend(prompt)}
@@ -148,6 +144,7 @@ function InputBar({
   onAbort: () => void;
   disabled: boolean;
 }) {
+  const { t } = useTranslation();
   const [text, setText] = useState('');
   const isStreaming = useChatStore((s) => s.isStreaming);
   const messages = useChatStore((s) => s.messages);
@@ -170,7 +167,7 @@ function InputBar({
       >
         <TextInput
           className="flex-1 text-sm leading-5 text-white"
-          placeholder="Message…"
+          placeholder={t('chat.placeholder')}
           placeholderTextColor="#6B7280"
           value={text}
           onChangeText={setText}
@@ -200,7 +197,7 @@ function InputBar({
         </Text>
         {messages.length > 0 && (
           <Pressable onPress={clearMessages}>
-            <Text className="text-xs text-gray-600">Clear conversation</Text>
+            <Text className="text-xs text-gray-600">{t('chat.clearConversation')}</Text>
           </Pressable>
         )}
       </View>
@@ -213,13 +210,14 @@ function renderMessage({ item }: ListRenderItemInfo<ChatMessage>) {
 }
 
 function ConnectionBanner({ status }: { status: string }) {
+  const { t } = useTranslation();
   if (status === 'connected' || status === 'idle') return null;
   const label =
     status === 'connecting'
-      ? 'Connecting…'
+      ? t('chat.connecting')
       : status === 'reconnecting'
-        ? 'Reconnecting…'
-        : 'Disconnected';
+        ? t('chat.reconnecting')
+        : t('chat.disconnected');
   return (
     <View className="bg-amber-900/40 px-4 py-1">
       <Text className="text-center text-xs text-amber-200">{label}</Text>
@@ -240,7 +238,7 @@ export default function ChatScreen() {
   const confirmWrite = useChatStore((s) => s.confirmWrite);
   const denyWrite = useChatStore((s) => s.denyWrite);
   const abort = useChatStore((s) => s.abort);
-  const user = useAuthStore((s) => s.user);
+  const locale = useLocaleStore((s) => s.locale);
   const listRef = useRef<FlatList<ChatMessage>>(null);
 
   // Single session per chat session in the app — id is stable for the lifetime
@@ -253,10 +251,10 @@ export default function ChatScreen() {
   useEffect(() => {
     const token = getAccessToken();
     if (token) {
-      connect({ token, sessionId, locale: user?.locale ?? 'en' });
+      connect({ token, sessionId, locale });
     }
     return () => disconnect();
-  }, [connect, disconnect, sessionId, user?.locale]);
+  }, [connect, disconnect, sessionId, locale]);
 
   useEffect(() => {
     if (messages.length > 0) {
