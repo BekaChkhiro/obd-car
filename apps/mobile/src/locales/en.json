@@ -74,5 +74,39 @@
     "scanning": "Scanning…",
     "connect": "Connect",
     "disconnect": "Disconnect"
+  },
+  "onboarding": {
+    "step": "Step {{current}} of {{total}}",
+    "welcome": {
+      "title": "Welcome to OBD-II AI",
+      "subtitle": "Your AI-powered car diagnostic assistant. Let's get you set up in a few steps.",
+      "bleHeading": "Bluetooth Required",
+      "bleBody": "This app uses Bluetooth to connect to your ELM327 OBD-II adapter. Please ensure Bluetooth is enabled.",
+      "next": "Get Started"
+    },
+    "pair": {
+      "title": "Connect Your Adapter",
+      "subtitle": "Scan for your ELM327 OBD-II adapter. Make sure it's plugged into your car's OBD port.",
+      "skip": "Skip for now",
+      "connected": "Adapter connected",
+      "next": "Continue"
+    },
+    "vin": {
+      "title": "Vehicle Identification",
+      "subtitle": "We'll read your VIN automatically from the ECU, or you can enter it manually.",
+      "autoReading": "Reading VIN from ECU…",
+      "autoSuccess": "VIN detected",
+      "autoFailed": "Could not read VIN automatically",
+      "readVin": "Read VIN from adapter",
+      "orEnterManually": "or enter manually",
+      "placeholder": "e.g. 1HGBH41JXMN109186",
+      "skip": "Skip",
+      "next": "Continue"
+    },
+    "language": {
+      "title": "Choose Language",
+      "subtitle": "Select your preferred language. You can change this later from the home screen.",
+      "finish": "Get Started"
+    }
   }
 }
