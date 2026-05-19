@@ -15,6 +15,7 @@ import { useChatStore } from '@/src/store/chat';
 import { useAuthStore } from '@/src/store/auth';
 import { getAccessToken } from '@/src/lib/api';
 import { MarkdownText } from '@/src/components/MarkdownText';
+import { PidWidget } from '@/src/components/PidWidget';
 import { ToolCallBadge } from '@/src/components/ToolCallBadge';
 import { WriteConfirmModal } from '@/src/components/WriteConfirmModal';
 import type { ChatMessage } from '@/src/types/chat';
@@ -93,7 +94,16 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
         {msg.toolCalls && msg.toolCalls.length > 0 && (
           <View className="ml-1 mt-1 gap-1">
             {msg.toolCalls.map((tc) => (
-              <ToolCallBadge key={tc.id} toolCall={tc} />
+              <View key={tc.id}>
+                <ToolCallBadge toolCall={tc} />
+                {(tc.name === 'read_pid' || tc.name === 'read_battery_voltage') && (
+                  <PidWidget
+                    toolName={tc.name}
+                    toolInput={tc.input ?? {}}
+                    toolStatus={tc.status}
+                  />
+                )}
+              </View>
             ))}
           </View>
         )}
