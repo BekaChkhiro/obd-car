@@ -12,10 +12,12 @@ from .auth.routes import router as auth_router
 from .config import settings
 from .db import init_db
 from .logging import configure_logging
+from .sentry import init_sentry
 from .sync.routes import router as sync_router
 from .ws.routes import router as ws_router
 
 configure_logging()
+init_sentry()
 
 log = structlog.get_logger(__name__)
 

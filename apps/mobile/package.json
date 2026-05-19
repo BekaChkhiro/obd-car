@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@obd-car/obd-protocol": "workspace:*",
+    "@sentry/react-native": "~6.15.0",
     "expo": "~54.0.33",
     "expo-auth-session": "~7.0.11",
     "expo-constants": "^17.1.8",

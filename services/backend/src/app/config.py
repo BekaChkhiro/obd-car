@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     # Google OAuth — server-side client ID for ID-token verification
     google_client_id: str = ""
 
+    # Sentry — leave blank to disable crash reporting
+    sentry_dsn: str = ""
+
     # Rate limits — applied to /auth/* endpoints
     auth_rate_limit: str = "10/minute"
 
