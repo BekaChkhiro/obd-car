@@ -12,6 +12,7 @@ export default function AppLayout() {
   return (
     <Stack>
       <Stack.Screen name="index" options={{ title: 'OBD Car' }} />
+      <Stack.Screen name="onboarding" options={{ headerShown: false }} />
       <Stack.Screen name="pair" options={{ title: 'Connect Adapter' }} />
       <Stack.Screen name="dashboard" options={{ title: 'Dashboard' }} />
       <Stack.Screen name="threshold-settings" options={{ title: 'Alert Thresholds' }} />
