@@ -3,14 +3,20 @@
   "compilerOptions": {
     "strict": true,
     "paths": {
-      "@/*": ["./*"],
-      "@obd-car/obd-protocol": ["../../packages/obd-protocol/src/index.ts"]
+      "@/*": [
+        "./*"
+      ],
+      "@obd-car/obd-protocol": [
+        "../../packages/obd-protocol/src/index.ts"
+      ]
     }
   },
   "include": [
     "**/*.ts",
     "**/*.tsx",
     ".expo/types/**/*.d.ts",
-    "expo-env.d.ts"
+    "expo-env.d.ts",
+    "nativewind-env.d.ts",
+    ".expo/types/**/*.ts"
   ]
 }
