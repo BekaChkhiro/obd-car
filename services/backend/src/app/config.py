@@ -31,6 +31,12 @@ class Settings(BaseSettings):
     # Rate limits — applied to /auth/* endpoints
     auth_rate_limit: str = "10/minute"
 
+    # Rate limit for AI assistant turns per user (WebSocket user_message frames)
+    ai_rate_limit: str = "20/hour"
+
+    # Maximum total tokens (input + output) per WebSocket session; 0 = unlimited
+    session_token_budget: int = 0
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

@@ -46,6 +46,7 @@ import structlog
 from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..auth.rate_limit import check_ai_rate_limit
 from ..claude import (
     ClaudeClient,
     TextDelta,
@@ -57,6 +58,7 @@ from ..claude import (
     build_system_prompt,
     run_assistant_turn,
 )
+from ..config import settings
 from ..db import get_session
 from ..models import DiagnosticSession, Message
 from ..security import TokenError, decode_access_token
@@ -140,6 +142,8 @@ class _SessionState:
     # Write tools pre-approved by the user via a `confirm_write` frame.
     # Consumed (cleared) at the start of each turn so confirmation is one-shot.
     confirmed_writes: set[str] = field(default_factory=set)
+    # Cumulative Anthropic API tokens consumed this session (input + output).
+    tokens_used: int = 0
 
     async def send(self, frame: dict[str, Any]) -> None:
         self.seq += 1
@@ -250,6 +254,7 @@ async def _run_turn(
                     }
                 )
             elif isinstance(event, TurnComplete):
+                state.tokens_used += event.input_tokens + event.output_tokens
                 if started:
                     await state.send(
                         {
@@ -262,6 +267,8 @@ async def _run_turn(
                         "type": "turn_complete",
                         "stop_reason": event.stop_reason,
                         "iterations": event.iterations,
+                        "input_tokens": event.input_tokens,
+                        "output_tokens": event.output_tokens,
                     }
                 )
     except asyncio.CancelledError:
@@ -315,6 +322,27 @@ async def _handle_user_message(
                 "type": "error",
                 "code": "bad_message",
                 "message": "user_message requires non-empty 'content' string",
+            }
+        )
+        return
+
+    if not check_ai_rate_limit(state.user_id):
+        await state.send(
+            {
+                "type": "error",
+                "code": "rate_limited",
+                "message": f"AI turn rate limit exceeded ({settings.ai_rate_limit}). Try again later.",
+            }
+        )
+        return
+
+    budget = settings.session_token_budget
+    if budget > 0 and state.tokens_used >= budget:
+        await state.send(
+            {
+                "type": "error",
+                "code": "token_budget_exceeded",
+                "message": f"Session token budget of {budget} tokens has been reached.",
             }
         )
         return

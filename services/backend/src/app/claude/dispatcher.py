@@ -99,6 +99,8 @@ class ToolCallError:
 class TurnComplete:
     stop_reason: str
     iterations: int
+    input_tokens: int = 0
+    output_tokens: int = 0
     type: Literal["turn_complete"] = "turn_complete"
 
 
@@ -193,6 +195,8 @@ async def run_assistant_turn(
     confirmed = frozenset(confirmed_writes or ())
     iterations = 0
     last_stop_reason: str = "unknown"
+    total_input_tokens: int = 0
+    total_output_tokens: int = 0
 
     while iterations < max_iterations:
         iterations += 1
@@ -220,6 +224,11 @@ async def run_assistant_turn(
                             yield TextDelta(text=text)
 
             final_message = await stream.get_final_message()
+
+        usage = getattr(final_message, "usage", None)
+        if usage is not None:
+            total_input_tokens += getattr(usage, "input_tokens", 0)
+            total_output_tokens += getattr(usage, "output_tokens", 0)
 
         stop_reason: str = getattr(final_message, "stop_reason", None) or "end_turn"
         last_stop_reason = stop_reason
@@ -345,4 +354,9 @@ async def run_assistant_turn(
             max_iterations=max_iterations,
         )
 
-    yield TurnComplete(stop_reason=last_stop_reason, iterations=iterations)
+    yield TurnComplete(
+        stop_reason=last_stop_reason,
+        iterations=iterations,
+        input_tokens=total_input_tokens,
+        output_tokens=total_output_tokens,
+    )
