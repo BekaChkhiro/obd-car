@@ -1,31 +1,97 @@
 {
   "cli": {
-    "version": ">= 16.0.0"
+    "version": ">= 16.0.0",
+    "appVersionSource": "remote"
   },
   "build": {
+    "base": {
+      "env": {
+        "SENTRY_DSN": "",
+        "GOOGLE_IOS_CLIENT_ID": "",
+        "GOOGLE_ANDROID_CLIENT_ID": ""
+      }
+    },
     "development": {
+      "extends": "base",
       "developmentClient": true,
       "distribution": "internal",
+      "ios": {
+        "simulator": true
+      },
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleDebug"
+      },
       "env": {
         "API_URL": "http://localhost:8000",
-        "WS_URL": "ws://localhost:8000"
+        "WS_URL": "ws://localhost:8000",
+        "SENTRY_DSN": "",
+        "GOOGLE_IOS_CLIENT_ID": "",
+        "GOOGLE_ANDROID_CLIENT_ID": ""
       }
     },
     "preview": {
+      "extends": "base",
       "distribution": "internal",
+      "channel": "preview",
+      "ios": {
+        "simulator": false
+      },
+      "android": {
+        "buildType": "apk"
+      },
       "env": {
         "API_URL": "https://api-preview.obd-car.example.com",
-        "WS_URL": "wss://api-preview.obd-car.example.com"
+        "WS_URL": "wss://api-preview.obd-car.example.com",
+        "SENTRY_DSN": "",
+        "GOOGLE_IOS_CLIENT_ID": "",
+        "GOOGLE_ANDROID_CLIENT_ID": ""
       }
     },
     "production": {
+      "extends": "base",
+      "distribution": "store",
+      "channel": "production",
+      "ios": {
+        "credentialsSource": "remote"
+      },
+      "android": {
+        "buildType": "app-bundle",
+        "credentialsSource": "remote"
+      },
       "env": {
         "API_URL": "https://api.obd-car.example.com",
-        "WS_URL": "wss://api.obd-car.example.com"
+        "WS_URL": "wss://api.obd-car.example.com",
+        "SENTRY_DSN": "",
+        "GOOGLE_IOS_CLIENT_ID": "",
+        "GOOGLE_ANDROID_CLIENT_ID": ""
       }
     }
   },
   "submit": {
-    "production": {}
+    "preview": {
+      "ios": {
+        "appleId": "YOUR_APPLE_ID",
+        "ascAppId": "YOUR_ASC_APP_ID",
+        "appleTeamId": "YOUR_APPLE_TEAM_ID",
+        "groups": ["Beta Testers"]
+      },
+      "android": {
+        "serviceAccountKeyPath": "./secrets/google-service-account.json",
+        "track": "internal"
+      }
+    },
+    "production": {
+      "ios": {
+        "appleId": "YOUR_APPLE_ID",
+        "ascAppId": "YOUR_ASC_APP_ID",
+        "appleTeamId": "YOUR_APPLE_TEAM_ID"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./secrets/google-service-account.json",
+        "track": "production",
+        "releaseStatus": "completed"
+      }
+    }
   }
 }

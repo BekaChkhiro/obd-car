@@ -9,7 +9,16 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
-    "test": "jest"
+    "test": "jest",
+    "build:dev": "eas build --profile development --platform all",
+    "build:preview": "eas build --profile preview --platform all",
+    "build:prod": "eas build --profile production --platform all",
+    "submit:preview": "eas submit --profile preview --platform all",
+    "submit:testflight": "eas submit --profile preview --platform ios",
+    "submit:android-internal": "eas submit --profile preview --platform android",
+    "submit:prod": "eas submit --profile production --platform all",
+    "release:preview": "eas build --profile preview --platform all --auto-submit",
+    "release:prod": "eas build --profile production --platform all --auto-submit"
   },
   "dependencies": {
     "@obd-car/obd-protocol": "workspace:*",
