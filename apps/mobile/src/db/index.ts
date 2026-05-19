@@ -9,6 +9,7 @@ export type {
   ToolCall,
   Vehicle,
 } from './schema';
+export type { SessionSummary } from './repositories/sessions';
 export * as messagesRepo from './repositories/messages';
 export * as sessionsRepo from './repositories/sessions';
 export * as syncCursorsRepo from './repositories/sync-cursors';
