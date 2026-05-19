@@ -1,5 +1,15 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
-import type { Session } from '../schema';
+import type { Session, SyncStatus } from '../schema';
+
+export interface SessionSummary {
+  id: string;
+  user_id: number;
+  vehicle_id: string | null;
+  created_at: string;
+  sync_status: SyncStatus;
+  message_count: number;
+  first_user_message: string | null;
+}
 
 export async function getSessions(
   db: SQLiteDatabase,
@@ -7,6 +17,23 @@ export async function getSessions(
 ): Promise<Session[]> {
   return db.getAllAsync<Session>(
     'SELECT * FROM sessions WHERE user_id = ? ORDER BY created_at DESC',
+    userId,
+  );
+}
+
+export async function getSessionsWithSummary(
+  db: SQLiteDatabase,
+  userId: number,
+): Promise<SessionSummary[]> {
+  return db.getAllAsync<SessionSummary>(
+    `SELECT s.id, s.user_id, s.vehicle_id, s.created_at, s.sync_status,
+            COUNT(m.id) AS message_count,
+            MIN(CASE WHEN m.role = 'user' THEN m.content END) AS first_user_message
+     FROM sessions s
+     LEFT JOIN messages m ON m.session_id = s.id
+     WHERE s.user_id = ?
+     GROUP BY s.id
+     ORDER BY s.created_at DESC`,
     userId,
   );
 }

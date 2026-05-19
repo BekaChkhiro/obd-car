@@ -16,6 +16,8 @@ export default function AppLayout() {
       <Stack.Screen name="dashboard" options={{ title: 'Dashboard' }} />
       <Stack.Screen name="threshold-settings" options={{ title: 'Alert Thresholds' }} />
       <Stack.Screen name="chat" options={{ title: 'AI Assistant' }} />
+      <Stack.Screen name="history" options={{ title: 'Session History' }} />
+      <Stack.Screen name="history/[id]" options={{ title: 'Session' }} />
     </Stack>
   );
 }
