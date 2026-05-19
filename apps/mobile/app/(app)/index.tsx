@@ -64,6 +64,7 @@ export default function HomeScreen() {
       ) : null}
 
       <Pressable
+        testID="home-connect-adapter"
         onPress={() => router.push('/(app)/pair')}
         className="mt-8 rounded-xl bg-blue-600 px-6 py-3"
       >
@@ -79,6 +80,7 @@ export default function HomeScreen() {
       ) : null}
 
       <Pressable
+        testID="home-open-dashboard"
         onPress={() => router.push('/(app)/dashboard')}
         className="mt-3 rounded-xl bg-gray-900 px-6 py-3"
       >
@@ -86,6 +88,7 @@ export default function HomeScreen() {
       </Pressable>
 
       <Pressable
+        testID="home-open-chat"
         onPress={() => router.push('/(app)/chat')}
         className="mt-3 rounded-xl bg-indigo-600 px-6 py-3"
       >

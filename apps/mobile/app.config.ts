@@ -17,5 +17,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     googleIosClientId: process.env.GOOGLE_IOS_CLIENT_ID ?? '',
     googleAndroidClientId: process.env.GOOGLE_ANDROID_CLIENT_ID ?? '',
     sentryDsn: process.env.SENTRY_DSN ?? '',
+    e2e: process.env.EXPO_PUBLIC_E2E === '1' || process.env.EXPO_PUBLIC_E2E === 'true',
   },
 });

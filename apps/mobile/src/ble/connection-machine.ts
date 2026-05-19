@@ -117,6 +117,28 @@ export class ConnectionMachine {
     }
   }
 
+  /**
+   * Inject a pre-built ConnectedAdapter and transition straight to 'ready'.
+   *
+   * Used by E2E tests to skip BLE scanning/connection and drive the rest of
+   * the app (chat tool executor, dashboard poller) against a mock ELM327.
+   * The supplied adapter is owned by the machine afterwards — reset() /
+   * disconnect() will tear it down via its `client.close()` method.
+   */
+  injectAdapter(adapter: ConnectedAdapter, deviceId = 'mock-adapter'): void {
+    this.cancelReconnect();
+    this.cancelScanTimer();
+    this.ble.stopDeviceScan();
+    void this.teardownAdapter();
+
+    this.targetDeviceId = null;
+    this.adapter = adapter;
+    this.store.setConnectedDeviceId(deviceId);
+    this.retryCount = 0;
+    this.store.setRetryCount(0);
+    this.transition('ready');
+  }
+
   /** Intentional disconnect — clears reconnect target and stops retries. */
   async disconnect(): Promise<void> {
     this.cancelReconnect();

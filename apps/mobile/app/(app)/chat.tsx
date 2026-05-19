@@ -15,6 +15,8 @@ import { useTranslation } from 'react-i18next';
 import { useChatStore } from '@/src/store/chat';
 import { useLocaleStore } from '@/src/store/locale';
 import { getAccessToken } from '@/src/lib/api';
+import { connectionMachine } from '@/src/ble/connection';
+import { isE2E } from '@/src/lib/e2e';
 import { MarkdownText } from '@/src/components/MarkdownText';
 import { PidWidget } from '@/src/components/PidWidget';
 import { ToolCallBadge } from '@/src/components/ToolCallBadge';
@@ -269,6 +271,31 @@ export default function ChatScreen() {
     [sendUserMessage],
   );
 
+  // E2E-only: invoke the DTC clear directly against the connected (mock)
+  // adapter and surface the outcome as a chat banner. Lets Maestro exercise
+  // the full mock-adapter → DTC-clear path without a live backend.
+  const [e2eClearStatus, setE2eClearStatus] = useState<string | null>(null);
+  const [e2eClearing, setE2eClearing] = useState(false);
+  const handleE2eClearDtcs = useCallback(async () => {
+    const adapter = connectionMachine.getAdapter();
+    if (!adapter) {
+      setE2eClearStatus('no-adapter');
+      return;
+    }
+    setE2eClearing(true);
+    setE2eClearStatus(null);
+    try {
+      const { verified, remainingDtcs } = await adapter.dtc.clearDtcs();
+      setE2eClearStatus(
+        verified && remainingDtcs.length === 0 ? 'cleared' : `remaining-${remainingDtcs.length}`,
+      );
+    } catch (err) {
+      setE2eClearStatus(`error:${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setE2eClearing(false);
+    }
+  }, []);
+
   return (
     <KeyboardAvoidingView
       className="flex-1 bg-gray-950"
@@ -276,6 +303,31 @@ export default function ChatScreen() {
       keyboardVerticalOffset={90}
     >
       <ConnectionBanner status={connection} />
+
+      {isE2E() && (
+        <View testID="e2e-chat-toolbar" className="border-b border-gray-800 bg-gray-900 px-4 py-2">
+          <Pressable
+            testID="e2e-clear-dtcs"
+            onPress={handleE2eClearDtcs}
+            disabled={e2eClearing}
+            className={`items-center rounded-lg px-3 py-2 ${e2eClearing ? 'bg-purple-900' : 'bg-purple-600'}`}
+          >
+            <Text className="text-xs font-semibold text-white">
+              {e2eClearing ? 'E2E: clearing DTCs…' : 'E2E: clear DTCs (mock)'}
+            </Text>
+          </Pressable>
+          {e2eClearStatus && (
+            <Text testID="e2e-clear-dtcs-status" className="mt-1 text-center text-xs text-purple-300">
+              {e2eClearStatus === 'cleared'
+                ? 'DTCs cleared'
+                : e2eClearStatus === 'no-adapter'
+                  ? 'No adapter connected'
+                  : `Status: ${e2eClearStatus}`}
+            </Text>
+          )}
+        </View>
+      )}
+
       {messages.length === 0 ? (
         <EmptyChat onSend={handleSend} />
       ) : (

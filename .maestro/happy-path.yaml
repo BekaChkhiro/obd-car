@@ -1,0 +1,45 @@
+appId: com.obdcar.mobile
+name: T6.4 — Happy path (mock adapter → chat → DTC clear)
+tags:
+  - happy-path
+  - smoke
+---
+# Launch the app with E2E mode enabled. The build under test must be built
+# with EXPO_PUBLIC_E2E=1 so the E2E-only affordances render.
+- launchApp:
+    clearState: true
+    arguments:
+      e2e: true
+
+# ── Sign-in: bypass real auth ────────────────────────────────────────────────
+- assertVisible: "Welcome back"
+- tapOn:
+    id: "e2e-skip-sign-in"
+
+# ── Home: connect adapter ────────────────────────────────────────────────────
+- assertVisible:
+    id: "home-connect-adapter"
+- tapOn:
+    id: "home-connect-adapter"
+
+# ── Pair: connect the mock adapter ───────────────────────────────────────────
+- assertVisible: "Connect OBD Adapter"
+- tapOn:
+    id: "e2e-connect-mock-adapter"
+
+# Back on home — confirm mock adapter is shown as connected.
+- assertVisible:
+    id: "home-open-chat"
+
+# ── Chat: open and trigger DTC clear through the mock adapter ───────────────
+- tapOn:
+    id: "home-open-chat"
+- assertVisible:
+    id: "e2e-chat-toolbar"
+- tapOn:
+    id: "e2e-clear-dtcs"
+
+# Verify the clear succeeded against the mock ECU.
+- assertVisible:
+    id: "e2e-clear-dtcs-status"
+- assertVisible: "DTCs cleared"
