@@ -51,5 +51,6 @@ export type ClientFrame =
       content: unknown;
       is_error?: boolean;
     }
+  | { type: 'confirm_write'; name: string }
   | { type: 'abort' }
   | { type: 'resume'; last_seq: number };

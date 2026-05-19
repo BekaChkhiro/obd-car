@@ -7,16 +7,25 @@ function shortId(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
+interface PendingWriteConfirmation {
+  toolUseId: string;
+  name: string;
+}
+
 interface ChatState {
   messages: ChatMessage[];
   isStreaming: boolean;
   connection: ChatConnectionState;
   // Active assistant message id currently being streamed, if any.
   streamingMessageId: string | null;
+  // Set when the backend blocked a write tool and is waiting for user OK.
+  pendingWriteConfirmation: PendingWriteConfirmation | null;
 
   connect: (opts: { token: string; sessionId: string; locale?: string }) => void;
   disconnect: () => void;
   sendUserMessage: (content: string) => void;
+  confirmWrite: (followUpMessage: string) => void;
+  denyWrite: () => void;
   abort: () => void;
   clearMessages: () => void;
 }
@@ -91,20 +100,29 @@ function applyFrame(
       return;
 
     case 'tool_call_error':
-      set((s) => ({
-        messages: s.messages.map((m) =>
-          m.toolCalls && m.toolCalls.some((t) => t.id === frame.tool_use_id)
-            ? {
-                ...m,
-                toolCalls: m.toolCalls.map((t) =>
-                  t.id === frame.tool_use_id
-                    ? { ...t, status: 'error', result: frame.message }
-                    : t,
-                ),
-              }
-            : m,
-        ),
-      }));
+      if (frame.reason === 'confirmation_required') {
+        // Backend blocked a write tool — show confirmation modal instead of
+        // marking an error (there is no tool_call badge to update because
+        // ToolCallDispatched is never emitted for blocked write tools).
+        set(() => ({
+          pendingWriteConfirmation: { toolUseId: frame.tool_use_id, name: frame.name },
+        }));
+      } else {
+        set((s) => ({
+          messages: s.messages.map((m) =>
+            m.toolCalls && m.toolCalls.some((t) => t.id === frame.tool_use_id)
+              ? {
+                  ...m,
+                  toolCalls: m.toolCalls.map((t) =>
+                    t.id === frame.tool_use_id
+                      ? { ...t, status: 'error', result: frame.message }
+                      : t,
+                  ),
+                }
+              : m,
+          ),
+        }));
+      }
       return;
 
     case 'assistant_message_end':
@@ -150,6 +168,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   isStreaming: false,
   connection: 'idle',
   streamingMessageId: null,
+  pendingWriteConfirmation: null,
 
   connect: ({ token, sessionId, locale }) => {
     if (client !== null) {
@@ -190,6 +209,18 @@ export const useChatStore = create<ChatState>((set, get) => ({
       ],
     }));
     client?.sendUserMessage(id, trimmed);
+  },
+
+  confirmWrite: (followUpMessage: string) => {
+    const pending = get().pendingWriteConfirmation;
+    if (!pending) return;
+    client?.sendConfirmWrite(pending.name);
+    set(() => ({ pendingWriteConfirmation: null }));
+    get().sendUserMessage(followUpMessage);
+  },
+
+  denyWrite: () => {
+    set(() => ({ pendingWriteConfirmation: null }));
   },
 
   abort: () => {

@@ -88,6 +88,10 @@ export class ChatClient {
     });
   }
 
+  sendConfirmWrite(name: string): void {
+    this.send({ type: 'confirm_write', name });
+  }
+
   abort(): void {
     this.send({ type: 'abort' });
   }

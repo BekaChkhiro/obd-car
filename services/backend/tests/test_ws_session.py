@@ -336,6 +336,30 @@ def test_ws_rejects_empty_user_message(ws_client):
     assert err["code"] == "bad_message"
 
 
+def test_ws_confirm_write_acks_and_ignores_unknown_name(ws_client):
+    """confirm_write frame is acked; an empty/missing name is silently ignored."""
+    token = _register(ws_client, "cw1@test.com")
+    with ws_client.websocket_connect(f"/ws/session/sess-cw-1?token={token}") as ws:
+        _register_session(ws, token, "sess-cw-1")
+
+        ws.send_json({"type": "confirm_write", "name": "clear_dtcs"})
+        ack = ws.receive_json()
+        assert ack["type"] == "ack"
+        assert ack["received"] == "confirm_write"
+
+        # Empty name should still ack without crashing.
+        ws.send_json({"type": "confirm_write", "name": ""})
+        ack2 = ws.receive_json()
+        assert ack2["type"] == "ack"
+        assert ack2["received"] == "confirm_write"
+
+        # Session loop is still alive.
+        ws.send_json({"type": "obd_data", "pid": "0x0C"})
+        alive = ws.receive_json()
+    assert alive["type"] == "ack"
+    assert alive["received"] == "obd_data"
+
+
 def test_ws_tool_result_with_no_waiter_is_logged_not_fatal(ws_client):
     """A stray tool_result frame should not tear down the session."""
     token = _register(ws_client, "chat4@test.com")

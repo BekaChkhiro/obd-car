@@ -16,6 +16,7 @@ import { useAuthStore } from '@/src/store/auth';
 import { getAccessToken } from '@/src/lib/api';
 import { MarkdownText } from '@/src/components/MarkdownText';
 import { ToolCallBadge } from '@/src/components/ToolCallBadge';
+import { WriteConfirmModal } from '@/src/components/WriteConfirmModal';
 import type { ChatMessage } from '@/src/types/chat';
 
 const QUICK_PROMPTS = [
@@ -222,6 +223,9 @@ export default function ChatScreen() {
   const connect = useChatStore((s) => s.connect);
   const disconnect = useChatStore((s) => s.disconnect);
   const sendUserMessage = useChatStore((s) => s.sendUserMessage);
+  const pendingWriteConfirmation = useChatStore((s) => s.pendingWriteConfirmation);
+  const confirmWrite = useChatStore((s) => s.confirmWrite);
+  const denyWrite = useChatStore((s) => s.denyWrite);
   const abort = useChatStore((s) => s.abort);
   const user = useAuthStore((s) => s.user);
   const listRef = useRef<FlatList<ChatMessage>>(null);
@@ -280,6 +284,14 @@ export default function ChatScreen() {
         onAbort={abort}
         disabled={connection !== 'connected'}
       />
+
+      {pendingWriteConfirmation && (
+        <WriteConfirmModal
+          toolName={pendingWriteConfirmation.name}
+          onConfirm={() => confirmWrite('Yes, please proceed with clearing the DTCs.')}
+          onCancel={denyWrite}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }
