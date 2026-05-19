@@ -72,6 +72,7 @@ function applyFrame(
       const tc: ToolCall = {
         id: frame.tool_use_id,
         name: frame.name,
+        input: frame.input,
         status: 'running',
       };
       set((s) => ({
