@@ -39,3 +39,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# EAS submission credentials (never commit these)
+secrets/google-service-account.json
