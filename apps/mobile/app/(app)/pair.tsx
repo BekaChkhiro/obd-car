@@ -13,7 +13,9 @@ import { useRouter } from 'expo-router';
 import { State } from 'react-native-ble-plx';
 import { bleManager } from '@/src/ble/manager';
 import { connectionMachine } from '@/src/ble/connection';
+import { createMockAdapter } from '@/src/ble/mock-adapter';
 import { useBleStore, type ScannedDevice } from '@/src/store/ble';
+import { isE2E } from '@/src/lib/e2e';
 
 async function requestAndroidBlePermissions(): Promise<boolean> {
   if (Platform.OS !== 'android') return true;
@@ -136,6 +138,17 @@ export default function PairScreen() {
     }
   }
 
+  async function handleConnectMock() {
+    stopScan();
+    try {
+      const adapter = await createMockAdapter();
+      connectionMachine.injectAdapter(adapter, 'mock-adapter');
+      router.back();
+    } catch (err) {
+      Alert.alert('Mock adapter failed', err instanceof Error ? err.message : String(err));
+    }
+  }
+
   // Show connection error as an alert (only for user-triggered connects, not background retries)
   useEffect(() => {
     if (connectionPhase === 'error' && connectionError && retryCount === 0) {
@@ -187,6 +200,16 @@ export default function PairScreen() {
           </Text>
         </Pressable>
       </View>
+
+      {isE2E() && (
+        <Pressable
+          testID="e2e-connect-mock-adapter"
+          onPress={handleConnectMock}
+          className="mx-4 mb-3 items-center rounded-xl bg-purple-600 px-4 py-3"
+        >
+          <Text className="text-sm font-semibold text-white">E2E: Connect mock adapter</Text>
+        </Pressable>
+      )}
 
       <FlatList
         data={devices}

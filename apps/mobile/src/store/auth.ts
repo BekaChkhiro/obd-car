@@ -21,6 +21,12 @@ interface AuthState {
   googleSignIn: (idToken: string) => Promise<void>;
   logout: () => Promise<void>;
   deleteAccount: () => Promise<void>;
+  /**
+   * Stub-sign-in for E2E tests. Bypasses the backend by injecting a fake
+   * user and tokens directly into the store. Callers should gate this on
+   * isE2E() — production code paths must never invoke it.
+   */
+  e2eSignIn: () => void;
 }
 
 function applyAuthResponse(set: (partial: Partial<AuthState>) => void, res: AuthResponse): void {
@@ -88,5 +94,16 @@ export const useAuthStore = create<AuthState>((set) => ({
       await clearAllLocalData();
       set({ user: null, isLoading: false });
     }
+  },
+
+  e2eSignIn: () => {
+    setInMemoryTokens('e2e-access-token', 'e2e-refresh-token');
+    const user: UserPublic = {
+      id: 1,
+      email: 'e2e@example.com',
+      locale: 'en',
+      created_at: new Date().toISOString(),
+    };
+    set({ user, isLoading: false });
   },
 }));

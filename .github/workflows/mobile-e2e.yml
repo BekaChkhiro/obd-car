@@ -1,0 +1,104 @@
+name: Mobile E2E (Maestro)
+
+# Runs the T6.4 Maestro happy-path flow on an Android emulator against an
+# Expo dev build with EXPO_PUBLIC_E2E=1. The build/emulator combo only
+# runs when mobile or maestro paths change to keep PR latency reasonable.
+
+on:
+  pull_request:
+    paths:
+      - 'apps/mobile/**'
+      - 'packages/obd-protocol/**'
+      - '.maestro/**'
+      - '.github/workflows/mobile-e2e.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: mobile-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PNPM_VERSION: 10.30.3
+  NODE_VERSION: 20
+  JAVA_VERSION: 17
+  EXPO_PUBLIC_E2E: '1'
+
+jobs:
+  maestro:
+    name: Maestro happy path
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Enable KVM (required for Android emulator)
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Expo CLI
+        run: pnpm add -g expo@latest eas-cli@latest
+
+      - name: Install Maestro
+        run: |
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Prebuild Android project
+        working-directory: apps/mobile
+        run: npx expo prebuild --platform android --non-interactive --clean
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('apps/mobile/android/**/*.gradle*', 'apps/mobile/android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      - name: Build debug APK
+        working-directory: apps/mobile/android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Run Maestro on Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          ram-size: 4096M
+          disable-animations: true
+          script: |
+            adb install -r apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+            maestro test .maestro/happy-path.yaml --debug-output maestro-output
+
+      - name: Upload Maestro artifacts
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-output
+          path: maestro-output/
+          retention-days: 14

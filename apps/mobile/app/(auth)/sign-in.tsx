@@ -14,7 +14,9 @@ import { useAuthRequest } from 'expo-auth-session/providers/google';
 import Constants from 'expo-constants';
 import { ApiError } from '@/src/lib/api';
 import { useAuthStore } from '@/src/store/auth';
+import { useOnboardingStore } from '@/src/store/onboarding';
 import AuthInput from '@/src/components/AuthInput';
+import { isE2E } from '@/src/lib/e2e';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -32,7 +34,13 @@ export default function SignInScreen() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState('');
 
-  const { login, googleSignIn, isLoading } = useAuthStore();
+  const { login, googleSignIn, isLoading, e2eSignIn } = useAuthStore();
+  const markOnboarded = useOnboardingStore((s) => s.markOnboarded);
+
+  function handleE2eSignIn() {
+    e2eSignIn();
+    markOnboarded();
+  }
 
   const [, googleResponse, googlePromptAsync] = useAuthRequest({
     iosClientId: Constants.expoConfig?.extra?.googleIosClientId as string | undefined,
@@ -148,6 +156,16 @@ export default function SignInScreen() {
             <Text className="text-sm font-semibold text-blue-600">Sign up</Text>
           </Link>
         </View>
+
+        {isE2E() && (
+          <Pressable
+            testID="e2e-skip-sign-in"
+            onPress={handleE2eSignIn}
+            className="mt-8 items-center rounded-xl bg-purple-600 py-3"
+          >
+            <Text className="text-sm font-semibold text-white">E2E: Skip sign-in</Text>
+          </Pressable>
+        )}
       </ScrollView>
     </KeyboardAvoidingView>
   );
