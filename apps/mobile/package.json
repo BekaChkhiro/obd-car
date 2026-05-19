@@ -32,9 +32,12 @@
     "react-i18next": "^17.0.8",
     "react-native": "0.81.5",
     "react-native-ble-plx": "^3.5.1",
+    "react-native-css-interop": "^0.2.4",
     "react-native-mmkv": "^4.3.1",
+    "react-native-reanimated": "~4.1.7",
     "react-native-safe-area-context": "^4.14.1",
     "react-native-screens": "^4",
+    "react-native-worklets": "0.5.1",
     "tailwindcss": "^3.4.19",
     "zustand": "^5.0.13"
   },
