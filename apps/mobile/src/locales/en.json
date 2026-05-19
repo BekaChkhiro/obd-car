@@ -1,0 +1,78 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "cancel": "Cancel",
+    "ok": "OK",
+    "or": "or"
+  },
+  "home": {
+    "title": "OBD-II AI Diagnostic Assistant",
+    "subtitle": "Connect your ELM327 adapter to get started",
+    "signedInAs": "Signed in as {{email}}",
+    "connectAdapter": "Connect OBD Adapter",
+    "adapterConnected": "Adapter Connected — Manage",
+    "openDashboard": "Open Dashboard",
+    "aiAssistant": "AI Assistant",
+    "sessionHistory": "Session History",
+    "signOut": "Sign out",
+    "language": "Language"
+  },
+  "chat": {
+    "title": "OBD AI Assistant",
+    "subtitle": "Ask about your vehicle — diagnostics, error codes, live sensor data.",
+    "placeholder": "Message…",
+    "clearConversation": "Clear conversation",
+    "connecting": "Connecting…",
+    "reconnecting": "Reconnecting…",
+    "disconnected": "Disconnected",
+    "quickPrompt0": "What error codes do we have?",
+    "quickPrompt1": "How is the battery?",
+    "quickPrompt2": "Why is the engine heating up?"
+  },
+  "history": {
+    "noSessions": "No Sessions Yet",
+    "noSessionsHint": "Start a chat with the AI Assistant to create your first session.",
+    "openAssistant": "Open AI Assistant",
+    "emptySession": "Empty session",
+    "message": "message",
+    "messages": "messages",
+    "synced": "synced",
+    "pendingSync": "pending sync",
+    "syncFailed": "sync failed"
+  },
+  "auth": {
+    "welcomeBack": "Welcome back",
+    "signInSubtitle": "Sign in to your account",
+    "email": "Email",
+    "password": "Password",
+    "signIn": "Sign in",
+    "continueWithGoogle": "Continue with Google",
+    "noAccount": "Don't have an account?",
+    "signUp": "Sign up",
+    "createAccount": "Create account",
+    "signUpSubtitle": "Join to get started",
+    "hasAccount": "Already have an account?"
+  },
+  "thresholds": {
+    "title": "Alert Thresholds",
+    "subtitle": "Alerts fire when a value crosses its threshold. Settings are saved per vehicle.",
+    "coolantTemp": "Max Coolant Temperature",
+    "coolantTempDesc": "Alert when engine coolant exceeds this temperature.",
+    "batteryVoltage": "Min Battery Voltage",
+    "batteryVoltageDesc": "Alert when control module voltage drops below this level.",
+    "fuelLevel": "Min Fuel Level",
+    "fuelLevelDesc": "Alert when fuel tank level drops below this percentage.",
+    "reset": "Reset to Defaults",
+    "resetConfirmTitle": "Reset Thresholds",
+    "resetConfirmMessage": "Restore all thresholds to their default values?",
+    "mustBeNumber": "Must be a number",
+    "defaults": "Defaults — Coolant: {{coolant}}°C  |  Battery: {{battery}} V  |  Fuel: {{fuel}}%"
+  },
+  "pair": {
+    "title": "Connect Adapter",
+    "scanning": "Scanning…",
+    "connect": "Connect",
+    "disconnect": "Disconnect"
+  }
+}
