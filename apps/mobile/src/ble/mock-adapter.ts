@@ -2,6 +2,7 @@ import { Elm327Client } from './elm327/client';
 import type { ElmTransport } from './elm327/transport';
 import type { ConnectedAdapter } from './manager';
 import { PidReader } from './pid-reader';
+import { DtcReader } from './dtc-reader';
 
 export interface MockAdapterOptions {
   /** Simulated round-trip latency in ms. Default: 20. */
@@ -85,6 +86,13 @@ function buildResponse(command: string, startTime: number): string {
       return `${encodeFuelLevel(simFuelLevel())}\r`;
     case '0142':
       return `${encodeBattery(simBattery())}\r`;
+    case '03':
+      // Stored DTCs: P0300 (random misfire) for demo purposes.
+      // Encoded: 0x03=P, subcategory=0, number=0x300 → byteA=0x03, byteB=0x00.
+      return '43 03 00\r';
+    case '07':
+      // Pending DTCs: none in demo.
+      return 'NO DATA\r';
     default:
       return 'NO DATA\r';
   }
@@ -148,6 +156,7 @@ export async function createMockAdapter(
   return {
     client,
     pid: new PidReader(client),
+    dtc: new DtcReader(client),
     // Mock always acts as auto-detected protocol — no real negotiation needed.
     negotiatedProtocol: { protocolNumber: 0, protocolName: 'Auto' },
   };

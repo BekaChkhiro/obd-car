@@ -7,6 +7,7 @@ import {
   type BleElmTransportConfig,
 } from './elm327';
 import { PidReader } from './pid-reader';
+import { DtcReader } from './dtc-reader';
 import { discoverSupportedPids, loadCachedPids, clearCachedPids } from './pid-discovery';
 import {
   negotiateProtocol,
@@ -19,6 +20,7 @@ import {
 
 export {
   PidReader,
+  DtcReader,
   discoverSupportedPids,
   loadCachedPids,
   clearCachedPids,
@@ -27,6 +29,7 @@ export {
   OBD_PROTOCOL_NAMES,
 };
 export type { PidKey, PidValue } from './pid-reader';
+export type { DtcResult, ReadDtcsOptions } from './dtc-reader';
 export type { NegotiatedProtocol, ProtocolNegotiationOptions };
 
 export const bleManager = new BleManager();
@@ -34,6 +37,7 @@ export const bleManager = new BleManager();
 export interface ConnectedAdapter {
   client: Elm327Client;
   pid: PidReader;
+  dtc: DtcReader;
   negotiatedProtocol: NegotiatedProtocol;
 }
 
@@ -72,5 +76,5 @@ export async function createElm327Client(
   };
   const negotiatedProtocol = await negotiateProtocol(client, protoOpts);
 
-  return { client, pid: new PidReader(client), negotiatedProtocol };
+  return { client, pid: new PidReader(client), dtc: new DtcReader(client), negotiatedProtocol };
 }
