@@ -15,6 +15,8 @@ obd-car/
   packages/
     obd-protocol/    # Shared TS types — PIDs, DTC codes, tool schemas (T0.4)
   docs/
+    PRIVACY_POLICY.md   # User-facing privacy policy + App Store / Play Store disclosures
+    DATA_HANDLING.md    # Internal data-handling reference (categories, retention, security)
 ```
 
 ## Requirements
