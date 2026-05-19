@@ -7,6 +7,7 @@ Inbound (phone → backend):
   * ``{"type":"register","supported_pids":[...],"vin":...,"locale":...}``
   * ``{"type":"user_message","id":"...","content":"..."}``
   * ``{"type":"tool_result","tool_use_id":"...","content":...,"is_error":false}``
+  * ``{"type":"confirm_write","name":"<tool>"}``  — user confirms a write tool
   * ``{"type":"abort"}``  — cancel the in-flight assistant turn
   * ``{"type":"resume","last_seq":N}``  — replay frames with seq > N
   * ``{"type":"obd_data",...}``  — opaque telemetry, acked
@@ -136,6 +137,9 @@ class _SessionState:
         default_factory=lambda: deque(maxlen=_REPLAY_BUFFER_SIZE)
     )
     turn_task: asyncio.Task[None] | None = None
+    # Write tools pre-approved by the user via a `confirm_write` frame.
+    # Consumed (cleared) at the start of each turn so confirmation is one-shot.
+    confirmed_writes: set[str] = field(default_factory=set)
 
     async def send(self, frame: dict[str, Any]) -> None:
         self.seq += 1
@@ -191,6 +195,10 @@ async def _run_turn(
 
     system_blocks = build_system_prompt(locale=state.locale, vin=state.vin)
 
+    # Snapshot and clear confirmed_writes atomically — confirmation is one-shot.
+    confirmed_snap = frozenset(state.confirmed_writes)
+    state.confirmed_writes.clear()
+
     try:
         async for event in run_assistant_turn(
             client=client,
@@ -198,6 +206,7 @@ async def _run_turn(
             messages=state.messages,
             system=system_blocks,
             tools=tools,
+            confirmed_writes=confirmed_snap,
         ):
             if isinstance(event, TextDelta):
                 await ensure_started()
@@ -362,6 +371,13 @@ async def _handle_tool_result(
         )
 
 
+async def _handle_confirm_write(state: _SessionState, frame: dict[str, Any]) -> None:
+    name = frame.get("name")
+    if isinstance(name, str) and name:
+        state.confirmed_writes.add(name)
+    await state.send({"type": "ack", "received": "confirm_write"})
+
+
 async def _handle_abort(state: _SessionState) -> None:
     task = state.turn_task
     if task is None or task.done():
@@ -451,6 +467,7 @@ async def ws_session(
             state, f, client=client, db=db, tools=tools
         ),
         "tool_result": lambda f: _handle_tool_result(state, f),
+        "confirm_write": lambda f: _handle_confirm_write(state, f),
         "abort": lambda _f: _handle_abort(state),
         "resume": lambda f: state.replay_since(int(f.get("last_seq", 0))),
     }
