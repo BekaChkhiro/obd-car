@@ -1,5 +1,8 @@
 import '../global.css';
 import '@/src/lib/i18n';
+import { initSentry, Sentry } from '@/src/lib/sentry';
+
+initSentry();
 
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
@@ -9,7 +12,7 @@ import { runMigrations } from '@/src/db/migrations';
 import { DB_NAME } from '@/src/db/database';
 import { ToastProvider } from '@/src/components/ToastProvider';
 
-export default function RootLayout() {
+function RootLayoutInner() {
   const { hydrate, isHydrated } = useAuthStore();
 
   useEffect(() => {
@@ -32,3 +35,5 @@ export default function RootLayout() {
     </SQLiteProvider>
   );
 }
+
+export default Sentry.wrap(RootLayoutInner);
