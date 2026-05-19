@@ -1,5 +1,6 @@
 import {
   parseDtcFrame,
+  parsePermaDtcFrame,
   getDtcDescription,
   isSaeGenericCode,
   type Dtc,
@@ -59,6 +60,21 @@ export class DtcReader {
     ]);
 
     return [...stored, ...pending].map((dtc) => ({
+      ...dtc,
+      description: getDtcDescription(dtc.code, locale),
+      isSaeGeneric: isSaeGenericCode(dtc.code),
+    }));
+  }
+
+  /**
+   * Reads permanent DTCs from the ECU (OBD-II mode 0x0A). Permanent DTCs
+   * cannot be cleared via mode 0x04 — the ECU clears them only after a
+   * successful self-verification drive cycle.
+   */
+  async readPermanentDtcs(options: ReadDtcsOptions = {}): Promise<DtcResult[]> {
+    const { locale = 'en', ...cmdOpts } = options;
+    const frame = await this.client.sendCommand('0A', cmdOpts);
+    return parsePermaDtcFrame(frame).map((dtc) => ({
       ...dtc,
       description: getDtcDescription(dtc.code, locale),
       isSaeGeneric: isSaeGenericCode(dtc.code),

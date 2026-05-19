@@ -73,15 +73,37 @@ export function useToolExecutor(): void {
             break;
           }
 
-          case 'read_freeze_frame':
-            // Implemented in T5.6.
-            sendToolResult(toolUseId, 'Freeze frame reader not yet available', true);
-            return;
+          case 'read_freeze_frame': {
+            const pid = input.pid as string;
+            const dtcCode = (input.dtc_code as string) ?? '';
+            const ff = await adapter.ff.readFreezeFrame(pid, dtcCode, { priority: 'high' });
+            result = {
+              pid: ff.pid,
+              dtcCode: ff.dtcCode,
+              name: ff.name,
+              value: ff.value,
+              unit: ff.unit,
+            };
+            break;
+          }
 
-          case 'read_vin':
-            // Implemented in T5.6.
-            sendToolResult(toolUseId, 'VIN reader not yet available', true);
-            return;
+          case 'read_vin': {
+            const { vin } = await adapter.vin.readVin({ priority: 'high' });
+            result = { vin };
+            break;
+          }
+
+          case 'read_permanent_dtcs': {
+            const permaDtcs = await adapter.dtc.readPermanentDtcs({ priority: 'high' });
+            result = {
+              dtcs: permaDtcs.map((d) => ({
+                code: d.code,
+                description: d.description ?? null,
+                isPermanent: true,
+              })),
+            };
+            break;
+          }
 
           default:
             sendToolResult(toolUseId, `Unknown tool: ${name}`, true);

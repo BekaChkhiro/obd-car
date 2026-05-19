@@ -8,6 +8,8 @@ import {
 } from './elm327';
 import { PidReader } from './pid-reader';
 import { DtcReader } from './dtc-reader';
+import { VinReader } from './vin-reader';
+import { FreezeFrameReader } from './freeze-frame-reader';
 import { discoverSupportedPids, loadCachedPids, clearCachedPids } from './pid-discovery';
 import {
   negotiateProtocol,
@@ -21,6 +23,8 @@ import {
 export {
   PidReader,
   DtcReader,
+  VinReader,
+  FreezeFrameReader,
   discoverSupportedPids,
   loadCachedPids,
   clearCachedPids,
@@ -30,6 +34,8 @@ export {
 };
 export type { PidKey, PidValue } from './pid-reader';
 export type { ClearDtcsResult, DtcResult, ReadDtcsOptions } from './dtc-reader';
+export type { VinResult } from './vin-reader';
+export type { FreezeFrameResult } from './freeze-frame-reader';
 export type { NegotiatedProtocol, ProtocolNegotiationOptions };
 
 export const bleManager = new BleManager();
@@ -38,6 +44,8 @@ export interface ConnectedAdapter {
   client: Elm327Client;
   pid: PidReader;
   dtc: DtcReader;
+  vin: VinReader;
+  ff: FreezeFrameReader;
   negotiatedProtocol: NegotiatedProtocol;
 }
 
@@ -76,5 +84,12 @@ export async function createElm327Client(
   };
   const negotiatedProtocol = await negotiateProtocol(client, protoOpts);
 
-  return { client, pid: new PidReader(client), dtc: new DtcReader(client), negotiatedProtocol };
+  return {
+    client,
+    pid: new PidReader(client),
+    dtc: new DtcReader(client),
+    vin: new VinReader(client),
+    ff: new FreezeFrameReader(client),
+    negotiatedProtocol,
+  };
 }

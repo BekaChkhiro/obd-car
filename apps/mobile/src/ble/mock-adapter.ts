@@ -3,6 +3,8 @@ import type { ElmTransport } from './elm327/transport';
 import type { ConnectedAdapter } from './manager';
 import { PidReader } from './pid-reader';
 import { DtcReader } from './dtc-reader';
+import { VinReader } from './vin-reader';
+import { FreezeFrameReader } from './freeze-frame-reader';
 
 export interface MockAdapterOptions {
   /** Simulated round-trip latency in ms. Default: 20. */
@@ -95,6 +97,18 @@ function buildResponse(command: string, startTime: number, dtcsCleared: boolean)
     case '07':
       // Pending DTCs: none in demo.
       return 'NO DATA\r';
+    case '0902':
+      // VIN: 17-char demo VIN "1GNEK13Z04R101234" encoded as ASCII hex.
+      // 49 02 01 = mode echo, PID echo, message count; then 17 VIN bytes.
+      return '49 02 01 31 47 4E 45 4B 31 33 5A 30 34 52 31 30 31 32 33 34\r';
+    case '020C': {
+      // Freeze-frame RPM (same encoding as mode 01, mode echo 42 instead of 41).
+      const rpmRaw = Math.round(simRpm(elapsed) * 4) & 0xffff;
+      return `42 0C ${hex2(rpmRaw >> 8)} ${hex2(rpmRaw)}\r`;
+    }
+    case '0A':
+      // Permanent DTCs: none in demo (0x4A echo, 0x00 padding).
+      return '4A 00\r';
     default:
       return 'NO DATA\r';
   }
@@ -162,6 +176,8 @@ export async function createMockAdapter(
     client,
     pid: new PidReader(client),
     dtc: new DtcReader(client),
+    vin: new VinReader(client),
+    ff: new FreezeFrameReader(client),
     // Mock always acts as auto-detected protocol — no real negotiation needed.
     negotiatedProtocol: { protocolNumber: 0, protocolName: 'Auto' },
   };
