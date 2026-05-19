@@ -64,7 +64,7 @@ function encodeBattery(volts: number): string {
   return `41 42 ${hex2(raw >> 8)} ${hex2(raw)}`;
 }
 
-function buildResponse(command: string, startTime: number): string {
+function buildResponse(command: string, startTime: number, dtcsCleared: boolean): string {
   const elapsed = Date.now() - startTime;
   const cmd = command.trim().toUpperCase().replace(/\r$/, '');
 
@@ -87,9 +87,11 @@ function buildResponse(command: string, startTime: number): string {
     case '0142':
       return `${encodeBattery(simBattery())}\r`;
     case '03':
-      // Stored DTCs: P0300 (random misfire) for demo purposes.
-      // Encoded: 0x03=P, subcategory=0, number=0x300 → byteA=0x03, byteB=0x00.
-      return '43 03 00\r';
+      // Stored DTCs: P0300 (random misfire) for demo, cleared after mode 04.
+      return dtcsCleared ? '43 00\r' : '43 03 00\r';
+    case '04':
+      // Clear DTCs (mode 04). ECU responds with 44 on success.
+      return '44\r';
     case '07':
       // Pending DTCs: none in demo.
       return 'NO DATA\r';
@@ -109,6 +111,7 @@ export class MockElmTransport implements ElmTransport {
   private readonly startTime = Date.now();
   private closed = false;
   private readonly replyDelayMs: number;
+  private dtcsCleared = false;
 
   constructor(options: MockAdapterOptions = {}) {
     this.replyDelayMs = options.replyDelayMs ?? 20;
@@ -116,7 +119,9 @@ export class MockElmTransport implements ElmTransport {
 
   async write(payload: string): Promise<void> {
     if (this.closed) return;
-    const response = buildResponse(payload, this.startTime) + '>';
+    const cmd = payload.trim().toUpperCase().replace(/\r$/, '');
+    if (cmd === '04') this.dtcsCleared = true;
+    const response = buildResponse(payload, this.startTime, this.dtcsCleared) + '>';
     setTimeout(() => {
       if (!this.closed && this.listener) {
         this.listener(response);

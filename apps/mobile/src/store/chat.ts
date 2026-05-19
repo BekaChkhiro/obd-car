@@ -12,6 +12,29 @@ interface PendingWriteConfirmation {
   name: string;
 }
 
+/** Async function registered by useToolExecutor to handle BLE tool dispatch. */
+export type ToolExecutor = (
+  toolUseId: string,
+  name: string,
+  input: Record<string, unknown>,
+) => Promise<void>;
+
+// Module-scoped executor set by useToolExecutor hook.
+let toolExecutor: ToolExecutor | null = null;
+
+export function registerToolExecutor(fn: ToolExecutor): void {
+  toolExecutor = fn;
+}
+
+export function unregisterToolExecutor(): void {
+  toolExecutor = null;
+}
+
+/** Send a tool result back to the backend over the open WebSocket. */
+export function sendToolResult(toolUseId: string, content: unknown, isError = false): void {
+  client?.sendToolResult(toolUseId, content, isError);
+}
+
 interface ChatState {
   messages: ChatMessage[];
   isStreaming: boolean;
@@ -82,6 +105,9 @@ function applyFrame(
             : m,
         ),
       }));
+      if (toolExecutor) {
+        void toolExecutor(frame.tool_use_id, frame.name, frame.input);
+      }
       return;
     }
 

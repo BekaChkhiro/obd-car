@@ -23,6 +23,13 @@ export interface ReadDtcsOptions extends SendCommandOptions {
   locale?: DtcLocale;
 }
 
+export interface ClearDtcsResult {
+  /** True when the re-read after clear found zero remaining DTCs. */
+  verified: boolean;
+  /** DTCs still present after the clear (empty array means all cleared). */
+  remainingDtcs: DtcResult[];
+}
+
 /**
  * Reads stored and/or pending DTCs from the ECU via mode 0x03 / 0x07,
  * then enriches each code with its SAE description when available.
@@ -56,5 +63,15 @@ export class DtcReader {
       description: getDtcDescription(dtc.code, locale),
       isSaeGeneric: isSaeGenericCode(dtc.code),
     }));
+  }
+
+  /**
+   * Clears all stored and pending DTCs from the ECU (OBD-II mode 0x04).
+   * Re-reads after the clear to verify the operation succeeded.
+   */
+  async clearDtcs(options: SendCommandOptions = {}): Promise<ClearDtcsResult> {
+    await this.client.sendCommand('04', options);
+    const remainingDtcs = await this.readDtcs({ includePending: true, ...options });
+    return { verified: remainingDtcs.length === 0, remainingDtcs };
   }
 }

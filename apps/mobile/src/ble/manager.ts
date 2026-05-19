@@ -29,7 +29,7 @@ export {
   OBD_PROTOCOL_NAMES,
 };
 export type { PidKey, PidValue } from './pid-reader';
-export type { DtcResult, ReadDtcsOptions } from './dtc-reader';
+export type { ClearDtcsResult, DtcResult, ReadDtcsOptions } from './dtc-reader';
 export type { NegotiatedProtocol, ProtocolNegotiationOptions };
 
 export const bleManager = new BleManager();

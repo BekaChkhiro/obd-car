@@ -18,6 +18,7 @@ import { MarkdownText } from '@/src/components/MarkdownText';
 import { PidWidget } from '@/src/components/PidWidget';
 import { ToolCallBadge } from '@/src/components/ToolCallBadge';
 import { WriteConfirmModal } from '@/src/components/WriteConfirmModal';
+import { useToolExecutor } from '@/src/hooks/useToolExecutor';
 import type { ChatMessage } from '@/src/types/chat';
 
 const QUICK_PROMPTS = [
@@ -227,6 +228,8 @@ function ConnectionBanner({ status }: { status: string }) {
 }
 
 export default function ChatScreen() {
+  useToolExecutor();
+
   const messages = useChatStore((s) => s.messages);
   const isStreaming = useChatStore((s) => s.isStreaming);
   const connection = useChatStore((s) => s.connection);
