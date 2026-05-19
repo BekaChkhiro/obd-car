@@ -137,3 +137,41 @@ async def test_google_sign_in_rejects_unverified_email(client):
 async def test_register_validation_errors(client, payload):
     resp = await client.post("/auth/register", json=payload)
     assert resp.status_code == 422
+
+
+async def test_delete_account_removes_user_and_returns_204(client):
+    reg = await client.post(
+        "/auth/register",
+        json={"email": "del@example.com", "password": "supersecret1"},
+    )
+    assert reg.status_code == 201
+    access = reg.json()["tokens"]["access_token"]
+
+    resp = await client.delete("/auth/me", headers={"Authorization": f"Bearer {access}"})
+    assert resp.status_code == 204
+
+    # Account no longer exists — login must fail
+    login = await client.post(
+        "/auth/login", json={"email": "del@example.com", "password": "supersecret1"}
+    )
+    assert login.status_code == 401
+
+
+async def test_delete_account_requires_auth(client):
+    resp = await client.delete("/auth/me")
+    assert resp.status_code == 401
+
+
+async def test_delete_account_cascades_refresh_tokens(client):
+    reg = await client.post(
+        "/auth/register",
+        json={"email": "cascade@example.com", "password": "supersecret1"},
+    )
+    refresh_token = reg.json()["tokens"]["refresh_token"]
+    access = reg.json()["tokens"]["access_token"]
+
+    await client.delete("/auth/me", headers={"Authorization": f"Bearer {access}"})
+
+    # Old refresh token must be invalid after deletion
+    r = await client.post("/auth/refresh", json={"refresh_token": refresh_token})
+    assert r.status_code == 401

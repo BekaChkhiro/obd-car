@@ -8,6 +8,7 @@ import {
   setInMemoryTokens,
 } from '../lib/api';
 import { clearTokens, saveTokens } from '../lib/token-store';
+import { clearAllLocalData } from '../lib/clear-local-data';
 
 interface AuthState {
   user: UserPublic | null;
@@ -19,6 +20,7 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   googleSignIn: (idToken: string) => Promise<void>;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
 }
 
 function applyAuthResponse(set: (partial: Partial<AuthState>) => void, res: AuthResponse): void {
@@ -74,5 +76,17 @@ export const useAuthStore = create<AuthState>((set) => ({
     clearInMemoryTokens();
     await clearTokens();
     set({ user: null, isLoading: false });
+  },
+
+  deleteAccount: async () => {
+    set({ isLoading: true });
+    try {
+      await authApi.deleteAccount();
+    } finally {
+      clearInMemoryTokens();
+      await clearTokens();
+      await clearAllLocalData();
+      set({ user: null, isLoading: false });
+    }
   },
 }));

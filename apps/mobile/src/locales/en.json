@@ -75,6 +75,12 @@
     "connect": "Connect",
     "disconnect": "Disconnect"
   },
+  "settings": {
+    "deleteAccount": "Delete account",
+    "deleteAccountConfirmTitle": "Delete account",
+    "deleteAccountConfirmMessage": "This will permanently delete your account and all associated data. This action cannot be undone.",
+    "deleteAccountError": "Could not delete account. Please try again."
+  },
   "onboarding": {
     "step": "Step {{current}} of {{total}}",
     "welcome": {

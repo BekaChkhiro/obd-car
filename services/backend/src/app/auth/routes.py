@@ -123,3 +123,12 @@ async def refresh(
 @router.get("/me", response_model=UserPublic)
 async def me(user: User = Depends(get_current_user)) -> UserPublic:
     return UserPublic.model_validate(user)
+
+
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_account(
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> None:
+    await session.delete(user)
+    await session.commit()
