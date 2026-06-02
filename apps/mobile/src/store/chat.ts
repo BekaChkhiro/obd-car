@@ -193,10 +193,14 @@ function applyFrame(
       return;
 
     case 'error':
-      // Surface backend errors as a transient assistant note so the user sees them.
+      // Surface backend errors as a transient assistant note so the user sees
+      // them. Also stop the in-flight bubble's streaming animation, since no
+      // assistant_message_end will arrive for the interrupted turn.
       set((s) => ({
         messages: [
-          ...s.messages,
+          ...s.messages.map((m) =>
+            m.id === s.streamingMessageId ? { ...m, isStreaming: false } : m,
+          ),
           {
             id: shortId(),
             role: 'assistant',
@@ -282,11 +286,26 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   abort: () => {
     client?.abort();
-    set(() => ({ isStreaming: false, streamingMessageId: null }));
-    void get();
+    set((s) => ({
+      isStreaming: false,
+      streamingMessageId: null,
+      // Clear the in-flight bubble's streaming flag so its animated dots stop;
+      // the backend won't send assistant_message_end for an aborted turn.
+      messages: s.streamingMessageId
+        ? s.messages.map((m) =>
+            m.id === s.streamingMessageId ? { ...m, isStreaming: false } : m,
+          )
+        : s.messages,
+    }));
   },
 
-  clearMessages: () => set(() => ({ messages: [], isStreaming: false })),
+  clearMessages: () =>
+    set(() => ({
+      messages: [],
+      isStreaming: false,
+      streamingMessageId: null,
+      pendingWriteConfirmation: null,
+    })),
 }));
 
 // ── test-only helpers (used by jest) ─────────────────────────────────────────
