@@ -19,7 +19,7 @@ interface GaugeCardProps {
   className?: string;
 }
 
-type GaugeStatus = 'good' | 'warn' | 'danger' | 'cold';
+type GaugeStatus = 'good' | 'warn' | 'danger';
 
 function getStatus(value: number, thresholds: GaugeThresholds): GaugeStatus {
   const { warnLow, dangerLow, warnHigh, dangerHigh } = thresholds;
@@ -34,7 +34,6 @@ const STATUS: Record<GaugeStatus, { bar: string; text: string; dot: string; labe
   good: { bar: 'bg-emerald-400', text: 'text-emerald-400', dot: 'bg-emerald-400', label: 'OK' },
   warn: { bar: 'bg-amber-400', text: 'text-amber-400', dot: 'bg-amber-400', label: 'WARN' },
   danger: { bar: 'bg-red-400', text: 'text-red-400', dot: 'bg-red-400', label: 'DANGER' },
-  cold: { bar: 'bg-cyan-400', text: 'text-cyan-400', dot: 'bg-cyan-400', label: 'COLD' },
 };
 
 export function GaugeCard({

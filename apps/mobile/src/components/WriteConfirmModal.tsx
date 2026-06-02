@@ -22,9 +22,12 @@ export function WriteConfirmModal({ toolName, onConfirm, onCancel }: Props) {
   };
 
   return (
-    <Modal transparent animationType="fade" statusBarTranslucent>
-      <View className="flex-1 items-center justify-center bg-black/80 px-6">
-        <View className="w-full rounded-3xl border border-zinc-800 bg-zinc-900 p-6">
+    <Modal transparent animationType="fade" statusBarTranslucent onRequestClose={onCancel}>
+      <Pressable
+        onPress={onCancel}
+        className="flex-1 items-center justify-center bg-black/80 px-6"
+      >
+        <Pressable onPress={() => {}} className="w-full rounded-3xl border border-zinc-800 bg-zinc-900 p-6">
           <View className="mb-3 flex-row items-center gap-2">
             <View className="h-1.5 w-1.5 rounded-full bg-red-400" />
             <Text className="text-[10px] font-bold tracking-[2px] text-red-300">
@@ -47,8 +50,8 @@ export function WriteConfirmModal({ toolName, onConfirm, onCancel }: Props) {
               <Text className="text-sm font-semibold text-zinc-300">Cancel</Text>
             </Pressable>
           </View>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }

@@ -4,7 +4,8 @@
     "error": "შეცდომა",
     "cancel": "გაუქმება",
     "ok": "კარგი",
-    "or": "ან"
+    "or": "ან",
+    "back": "უკან"
   },
   "tabs": {
     "garage": "გარაჟი",
@@ -47,6 +48,9 @@
     "connectAdapter": "ადაპტერის დაკავშირება",
     "runDemo": "დემო რეჟიმის გაშვება",
     "activeAlerts": "აქტიური გაფრთხილებები",
+    "alertCoolant": "გამაგრილებელი {{value}}°C — აჭარბებს {{limit}}°C ზღვარს",
+    "alertBattery": "ბატარეა {{value}} ვ — {{min}} ვ მინიმუმზე დაბლა",
+    "alertFuel": "საწვავი {{value}}% — {{min}}% მინიმუმზე დაბლა",
     "engineRpm": "ძრავი  ·  ბრუნი",
     "idle": "უმოქმედო",
     "redline": "ზღვარი",
@@ -122,7 +126,19 @@
     "signUp": "რეგისტრაცია",
     "createAccount": "ანგარიშის შექმნა",
     "signUpSubtitle": "შემოუერთდი დასაწყებად",
-    "hasAccount": "უკვე გაქვს ანგარიში?"
+    "hasAccount": "უკვე გაქვს ანგარიში?",
+    "emailRequired": "ელ. ფოსტა აუცილებელია",
+    "emailInvalid": "შეიყვანე სწორი ელ. ფოსტა",
+    "passwordRequired": "პაროლი აუცილებელია",
+    "passwordTooShort": "პაროლი უნდა იყოს მინიმუმ 8 სიმბოლო",
+    "genericError": "რაღაც შეცდომა მოხდა",
+    "googleNoToken": "Google-ით შესვლა ვერ მოხერხდა — ID token არ მიღებულა",
+    "googleFailed": "Google-ით შესვლა ვერ მოხერხდა",
+    "confirmPassword": "გაიმეორე პაროლი",
+    "confirmRequired": "გთხოვ დაადასტურო პაროლი",
+    "passwordsMismatch": "პაროლები არ ემთხვევა",
+    "emailInUse": "ეს ელ. ფოსტა უკვე გამოყენებულია",
+    "passwordHint": "მინ. 8 სიმბოლო"
   },
   "thresholds": {
     "title": "გამაფრთხილებელი ზღვრები",
@@ -133,6 +149,9 @@
     "batteryVoltageDesc": "გაფრთხილება, როდესაც ძაბვა ამ მნიშვნელობაზე დაბლა ჩავა.",
     "fuelLevel": "საწვავის მინ. დონე",
     "fuelLevelDesc": "გაფრთხილება, როდესაც საწვავი ამ პროცენტზე ნაკლები იქნება.",
+    "calibration": "კალიბრაცია",
+    "factoryDefaults": "ქარხნული ნაგულისხმევი",
+    "resetAction": "განულება",
     "reset": "ნაგულისხმევ მნიშვნელობებზე დაბრუნება",
     "resetConfirmTitle": "ზღვრების განულება",
     "resetConfirmMessage": "ყველა ზღვარი ნაგულისხმევ მნიშვნელობაზე დაბრუნდეს?",
@@ -171,7 +190,21 @@
     "wifiHint": "ჯერ დააკავშირე ტელეფონი ადაპტერის WiFi ქსელს (მაგ. WiFi_OBDII, ინტერნეტი არ არის). ნაგულისხმევი მნიშვნელობები ხშირად ვარგისია.",
     "host": "ჰოსტი",
     "port": "პორტი",
-    "connectWifi": "WIFI-ით დაკავშირება"
+    "connectWifi": "WIFI-ით დაკავშირება",
+    "unknownDevice": "უცნობი მოწყობილობა",
+    "connectedBadge": "დაკავშირებულია",
+    "connectBadge": "დაკავშირება",
+    "errPermTitle": "Bluetooth-ის ნებართვა საჭიროა",
+    "errPermBody": "გთხოვ მიეცი Bluetooth-ის ნებართვა პარამეტრებში OBD ადაპტერების მოსაძებნად.",
+    "errBtOffTitle": "Bluetooth გამორთულია",
+    "errBtOffBody": "გთხოვ ჩართო Bluetooth OBD ადაპტერების მოსაძებნად.",
+    "errMock": "მოდელური ადაპტერი ვერ ჩაიტვირთა",
+    "errList": "Bluetooth სიის წამოღება ვერ მოხერხდა",
+    "errClassic": "Classic დაკავშირება ვერ მოხერხდა",
+    "errInvalidTitle": "არასწორი",
+    "errInvalidBody": "შეიყვანე სწორი ჰოსტი და პორტი (მაგ. 192.168.0.10 / 35000).",
+    "errWifi": "WiFi დაკავშირება ვერ მოხერხდა",
+    "errConnection": "კავშირი ვერ შედგა"
   },
   "settings": {
     "deleteAccount": "ანგარიშის წაშლა",
@@ -193,6 +226,13 @@
       "subtitle": "მოძებნე ELM327 OBD-II ადაპტერი. დარწმუნდი, რომ ჩართულია მანქანის OBD პორტში.",
       "skip": "გამოტოვება",
       "connected": "ადაპტერი დაკავშირებულია",
+      "connecting": "ვუკავშირდები…",
+      "noDevices": "მოწყობილობა ვერ მოიძებნა",
+      "devicesFound": "ნაპოვნია {{count}} მოწყობილობა",
+      "unknownDevice": "უცნობი მოწყობილობა",
+      "connectedBadge": "დაკავშირებულია",
+      "emptyList": "Bluetooth მოწყობილობა ვერ მოიძებნა. დააჭირე სკანს ძებნისთვის.",
+      "connectionFailed": "კავშირი ვერ შედგა",
       "next": "გაგრძელება"
     },
     "vin": {

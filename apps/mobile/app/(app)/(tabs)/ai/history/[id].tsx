@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { FlatList, Text, View, type ListRenderItemInfo } from 'react-native';
+import { ActivityIndicator, FlatList, Text, View, type ListRenderItemInfo } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
+import { colors } from '@/src/theme/colors';
 import { useSQLiteContext } from 'expo-sqlite';
 import { getMessages } from '@/src/db/repositories/messages';
 import { getSession } from '@/src/db/repositories/sessions';
@@ -24,7 +25,7 @@ function MessageBubble({ msg }: { msg: Message }) {
     <View className={`mb-3 px-4 ${isUser ? 'items-end' : 'items-start'}`}>
       <View
         className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${
-          isUser ? 'rounded-tr-sm bg-cyan-500' : 'rounded-tl-sm border border-zinc-800 bg-zinc-900'
+          isUser ? 'rounded-tr-md bg-cyan-500' : 'rounded-tl-md border border-zinc-800 bg-zinc-900'
         }`}
       >
         <Text className={`text-sm leading-5 ${isUser ? 'text-zinc-950' : 'text-zinc-100'}`}>
@@ -72,6 +73,7 @@ export default function SessionDetailScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [session, setSession] = useState<Session | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!id) return;
@@ -87,14 +89,23 @@ export default function SessionDetailScreen() {
         const v = await getVehicle(db, sess.vehicle_id);
         setVehicle(v);
       }
+      setLoading(false);
     }
 
     load();
   }, [db, id]);
 
+  if (loading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-bg">
+        <ActivityIndicator color={colors.accent} />
+      </View>
+    );
+  }
+
   return (
     <FlatList
-      className="flex-1 bg-[#08080a]"
+      className="flex-1 bg-bg"
       contentContainerStyle={{ paddingTop: 12, paddingBottom: 40 }}
       data={messages}
       keyExtractor={(item) => item.id}

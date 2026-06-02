@@ -2,6 +2,7 @@ import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import Constants from 'expo-constants';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/src/store/auth';
 import { useLocaleStore, type Locale } from '@/src/store/locale';
@@ -67,7 +68,7 @@ export default function ProfileScreen() {
 
   return (
     <ScrollView
-      className="flex-1 bg-[#08080a]"
+      className="flex-1 bg-bg"
       contentContainerStyle={{
         paddingTop: insets.top + 12,
         paddingBottom: 32,
@@ -180,7 +181,7 @@ export default function ProfileScreen() {
       </View>
 
       <Text className="text-center text-[10px] tracking-widest text-zinc-700">
-        OBD-II  ·  v1.0
+        OBD-II  ·  v{Constants.expoConfig?.version ?? '1.0'}
       </Text>
     </ScrollView>
   );

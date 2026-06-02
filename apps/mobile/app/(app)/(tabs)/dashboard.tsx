@@ -3,6 +3,8 @@ import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { Feather } from '@expo/vector-icons';
+import { colors } from '@/src/theme/colors';
 import { useBleStore } from '@/src/store/ble';
 import { useDashboardStore } from '@/src/store/dashboard';
 import { useThresholdsStore } from '@/src/store/thresholds';
@@ -116,7 +118,7 @@ export default function DashboardScreen() {
 
   if (!adapter) {
     return (
-      <View className="flex-1 items-center justify-center bg-[#08080a] px-8">
+      <View className="flex-1 items-center justify-center bg-bg px-8">
         <View className="mb-6 items-center">
           <View className="mb-4 h-16 w-16 items-center justify-center rounded-full border border-zinc-800">
             <View className="h-2 w-2 rounded-full bg-zinc-700" />
@@ -149,7 +151,7 @@ export default function DashboardScreen() {
 
   return (
     <ScrollView
-      className="flex-1 bg-[#08080a]"
+      className="flex-1 bg-bg"
       contentContainerStyle={{
         paddingHorizontal: 16,
         paddingTop: insets.top + 12,
@@ -274,22 +276,31 @@ export default function DashboardScreen() {
       {hasAlerts && (
         <View className="mt-2 rounded-2xl border border-red-500/40 bg-red-950/30 p-4">
           <View className="mb-2 flex-row items-center gap-2">
-            <View className="h-1.5 w-1.5 rounded-full bg-red-400" />
-            <Text className="text-[10px] font-bold tracking-[2px] text-red-300">ACTIVE ALERTS</Text>
+            <Feather name="alert-triangle" size={12} color={colors.danger} />
+            <Text className="text-[10px] font-bold tracking-eyebrow text-red-300">{t('dashboard.activeAlerts')}</Text>
           </View>
           {overheat && (
             <Text className="mt-1 text-xs text-red-200">
-              Coolant {Math.round(coolantTemp.value ?? 0)}°C — exceeds {thresholds.coolantTempMax}°C limit
+              {t('dashboard.alertCoolant', {
+                value: Math.round(coolantTemp.value ?? 0),
+                limit: thresholds.coolantTempMax,
+              })}
             </Text>
           )}
           {lowBattery && (
             <Text className="mt-1 text-xs text-red-200">
-              Battery {(batteryVoltage.value ?? 0).toFixed(1)} V — below {thresholds.batteryVoltageMin} V minimum
+              {t('dashboard.alertBattery', {
+                value: (batteryVoltage.value ?? 0).toFixed(1),
+                min: thresholds.batteryVoltageMin,
+              })}
             </Text>
           )}
           {lowFuel && (
             <Text className="mt-1 text-xs text-red-200">
-              Fuel {Math.round(fuelLevel.value ?? 0)}% — below {thresholds.fuelLevelMin}% minimum
+              {t('dashboard.alertFuel', {
+                value: Math.round(fuelLevel.value ?? 0),
+                min: thresholds.fuelLevelMin,
+              })}
             </Text>
           )}
         </View>
@@ -305,13 +316,13 @@ export default function DashboardScreen() {
         </View>
 
         <View className="mb-3 flex-row gap-3">
-          <PidChart label="RPM" data={rpmHistory} min={0} max={8000} unit="rpm" color="#22d3ee" className="flex-1" />
-          <PidChart label="Speed" data={speedHistory} min={0} max={200} unit={speed.unit || 'km/h'} color="#34d399" className="flex-1" />
+          <PidChart label="RPM" data={rpmHistory} min={0} max={8000} unit="rpm" color={colors.accent} className="flex-1" />
+          <PidChart label="Speed" data={speedHistory} min={0} max={200} unit={speed.unit || 'km/h'} color={colors.success} className="flex-1" />
         </View>
 
         <View className="mb-3 flex-row gap-3">
-          <PidChart label="Coolant" data={coolantTempHistory} min={-40} max={150} unit={coolantTemp.unit || '°C'} color="#fbbf24" className="flex-1" />
-          <PidChart label="Fuel" data={fuelLevelHistory} min={0} max={100} unit={fuelLevel.unit || '%'} color="#a78bfa" className="flex-1" />
+          <PidChart label="Coolant" data={coolantTempHistory} min={-40} max={150} unit={coolantTemp.unit || '°C'} color={colors.warning} className="flex-1" />
+          <PidChart label="Fuel" data={fuelLevelHistory} min={0} max={100} unit={fuelLevel.unit || '%'} color={colors.info} className="flex-1" />
         </View>
 
         <PidChart label="Battery" data={batteryVoltageHistory} min={8} max={16} unit={batteryVoltage.unit || 'V'} color="#22d3ee" />

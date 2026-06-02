@@ -18,6 +18,7 @@ import { getPairedClassicDevices } from '@/src/ble/elm327';
 import { connectionMachine } from '@/src/ble/connection';
 import { createMockAdapter } from '@/src/ble/mock-adapter';
 import { useBleStore, type ScannedDevice } from '@/src/store/ble';
+import { colors } from '@/src/theme/colors';
 
 type TransportTab = 'ble' | 'classic' | 'wifi';
 
@@ -77,11 +78,16 @@ function DeviceRow({
   isConnecting,
   isOtherBusy = false,
 }: DeviceRowProps) {
+  const { t } = useTranslation();
   const busy = isConnected || isConnecting || isOtherBusy;
   const sig = rssiBars(device.rssi);
+  const deviceName = device.name ?? t('pair.unknownDevice');
   return (
     <Pressable
       onPress={() => !busy && onConnect(device.id)}
+      accessibilityRole="button"
+      accessibilityLabel={`${deviceName}, ${device.rssi ?? '—'} dBm, ${sig.label}`}
+      accessibilityState={{ selected: isConnected, disabled: isOtherBusy }}
       className={`mx-4 mb-2 rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3 ${
         isOtherBusy ? 'opacity-40' : 'active:bg-zinc-900'
       }`}
@@ -89,7 +95,7 @@ function DeviceRow({
       <View className="flex-row items-center justify-between">
         <View className="flex-1 mr-3">
           <Text className="text-sm font-semibold text-zinc-50" numberOfLines={1}>
-            {device.name ?? 'Unknown device'}
+            {deviceName}
           </Text>
           <Text className="mt-0.5 text-[11px] text-zinc-500" numberOfLines={1}>
             {device.id}
@@ -113,7 +119,7 @@ function DeviceRow({
           }`}
         >
           {isConnecting ? (
-            <ActivityIndicator size="small" color="#fbbf24" />
+            <ActivityIndicator size="small" color={colors.warning} />
           ) : (
             <Text
               className={`text-[11px] font-semibold tracking-wider ${
@@ -124,7 +130,7 @@ function DeviceRow({
                     : 'text-zinc-950'
               }`}
             >
-              {isConnected ? 'CONNECTED' : 'CONNECT'}
+              {isConnected ? t('pair.connectedBadge') : t('pair.connectBadge')}
             </Text>
           )}
         </View>
@@ -144,20 +150,23 @@ function TabButton({ label, hint, active, onPress }: TabButtonProps) {
   return (
     <Pressable
       onPress={onPress}
-      className={`flex-1 items-center rounded-lg px-2 py-2.5 ${
-        active ? 'bg-zinc-100' : 'bg-transparent'
+      accessibilityRole="tab"
+      accessibilityState={{ selected: active }}
+      accessibilityLabel={`${label} — ${hint}`}
+      className={`flex-1 items-center rounded-lg px-2 py-3 ${
+        active ? 'bg-accent/10' : 'bg-transparent'
       }`}
     >
       <Text
         className={`text-[11px] font-bold tracking-wider ${
-          active ? 'text-zinc-950' : 'text-zinc-400'
+          active ? 'text-accent' : 'text-zinc-400'
         }`}
       >
         {label}
       </Text>
       <Text
-        className={`mt-0.5 text-[9px] ${
-          active ? 'text-zinc-600' : 'text-zinc-600'
+        className={`mt-0.5 text-[10px] ${
+          active ? 'text-zinc-400' : 'text-zinc-600'
         }`}
       >
         {hint}
@@ -195,17 +204,14 @@ export default function PairScreen() {
       const granted = await requestAndroidBlePermissions();
       setPermissionGranted(granted);
       if (!granted) {
-        Alert.alert(
-          'Bluetooth permission required',
-          'Please grant Bluetooth permissions in Settings to scan for OBD adapters.',
-        );
+        Alert.alert(t('pair.errPermTitle'), t('pair.errPermBody'));
       }
     }
     init();
     return () => {
       connectionMachine.stopScan();
     };
-  }, [setPermissionGranted]);
+  }, [setPermissionGranted, t]);
 
   useEffect(() => {
     if (tab !== 'ble') {
@@ -216,12 +222,12 @@ export default function PairScreen() {
     (async () => {
       const state = await bleManager.state();
       if (state !== State.PoweredOn) {
-        Alert.alert('Bluetooth is off', 'Please enable Bluetooth to scan for OBD adapters.');
+        Alert.alert(t('pair.errBtOffTitle'), t('pair.errBtOffBody'));
         return;
       }
       startScan();
     })();
-  }, [tab, permissionGranted, startScan, stopScan]);
+  }, [tab, permissionGranted, startScan, stopScan, t]);
 
   async function handleConnect(deviceId: string) {
     stopScan();
@@ -243,7 +249,7 @@ export default function PairScreen() {
       connectionMachine.injectAdapter(adapter, 'mock-adapter');
       router.replace('/(app)/dashboard');
     } catch (err) {
-      Alert.alert('Mock adapter failed', err instanceof Error ? err.message : String(err));
+      Alert.alert(t('pair.errMock'), err instanceof Error ? err.message : String(err));
     }
   }
 
@@ -266,9 +272,9 @@ export default function PairScreen() {
         })),
       );
     } catch (err) {
-      Alert.alert('Bluetooth list failed', err instanceof Error ? err.message : String(err));
+      Alert.alert(t('pair.errList'), err instanceof Error ? err.message : String(err));
     }
-  }, []);
+  }, [t]);
 
   async function handleConnectClassic(address: string) {
     setClassicConnecting(true);
@@ -277,7 +283,7 @@ export default function PairScreen() {
       connectionMachine.injectAdapter(adapter, `classic:${address}`);
       router.replace('/(app)/dashboard');
     } catch (err) {
-      Alert.alert('Classic connect failed', err instanceof Error ? err.message : String(err));
+      Alert.alert(t('pair.errClassic'), err instanceof Error ? err.message : String(err));
     } finally {
       setClassicConnecting(false);
     }
@@ -293,7 +299,7 @@ export default function PairScreen() {
     stopScan();
     const portNum = parseInt(wifiPort, 10);
     if (!wifiHost || Number.isNaN(portNum)) {
-      Alert.alert('Invalid', 'Enter a valid host and port (e.g. 192.168.0.10 / 35000).');
+      Alert.alert(t('pair.errInvalidTitle'), t('pair.errInvalidBody'));
       return;
     }
     setWifiConnecting(true);
@@ -304,7 +310,7 @@ export default function PairScreen() {
       connectionMachine.injectAdapter(adapter, `wifi:${wifiHost}:${portNum}`);
       router.replace('/(app)/dashboard');
     } catch (err) {
-      Alert.alert('WiFi connect failed', err instanceof Error ? err.message : String(err));
+      Alert.alert(t('pair.errWifi'), err instanceof Error ? err.message : String(err));
     } finally {
       setWifiConnecting(false);
     }
@@ -312,9 +318,9 @@ export default function PairScreen() {
 
   useEffect(() => {
     if (connectionPhase === 'error' && connectionError && retryCount === 0) {
-      Alert.alert('Connection failed', connectionError);
+      Alert.alert(t('pair.errConnection'), connectionError);
     }
-  }, [connectionPhase, connectionError, retryCount]);
+  }, [connectionPhase, connectionError, retryCount, t]);
 
   // Only surface named adapters — unnamed entries are usually phones, beacons,
   // or accessory peripherals that the user can't connect to anyway.
@@ -331,7 +337,7 @@ export default function PairScreen() {
         : { dot: 'bg-zinc-600', tone: 'text-zinc-400', text: t('pair.devicesFound', { count: namedDevices.length }) };
 
   return (
-    <View className="flex-1 bg-[#08080a]">
+    <View className="flex-1 bg-bg">
       <View className="px-5 pt-4 pb-3">
         <Text className="text-[10px] font-bold tracking-[3px] text-zinc-500">
           {t('pair.brand')}
@@ -502,7 +508,8 @@ export default function PairScreen() {
                 value={wifiHost}
                 onChangeText={setWifiHost}
                 placeholder="192.168.0.10"
-                placeholderTextColor="#52525b"
+                placeholderTextColor={colors.textDim}
+                accessibilityLabel={t('pair.host')}
                 keyboardType="numbers-and-punctuation"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -515,7 +522,8 @@ export default function PairScreen() {
                 value={wifiPort}
                 onChangeText={setWifiPort}
                 placeholder="35000"
-                placeholderTextColor="#52525b"
+                placeholderTextColor={colors.textDim}
+                accessibilityLabel={t('pair.port')}
                 keyboardType="number-pad"
                 className="mt-0.5 text-sm text-zinc-50"
               />
@@ -530,7 +538,7 @@ export default function PairScreen() {
             }`}
           >
             {wifiConnecting ? (
-              <ActivityIndicator color="#fafafa" />
+              <ActivityIndicator color={colors.textPrimary} />
             ) : (
               <Text className="text-sm font-bold tracking-wider text-zinc-950">
                 {t('pair.connectWifi')}

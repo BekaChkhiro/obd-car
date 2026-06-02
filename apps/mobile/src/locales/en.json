@@ -4,7 +4,8 @@
     "error": "Error",
     "cancel": "Cancel",
     "ok": "OK",
-    "or": "or"
+    "or": "or",
+    "back": "Back"
   },
   "tabs": {
     "garage": "GARAGE",
@@ -47,6 +48,9 @@
     "connectAdapter": "CONNECT ADAPTER",
     "runDemo": "Run demo mode",
     "activeAlerts": "ACTIVE ALERTS",
+    "alertCoolant": "Coolant {{value}}°C — exceeds {{limit}}°C limit",
+    "alertBattery": "Battery {{value}} V — below {{min}} V minimum",
+    "alertFuel": "Fuel {{value}}% — below {{min}}% minimum",
     "engineRpm": "ENGINE  ·  RPM",
     "idle": "IDLE",
     "redline": "REDLINE",
@@ -122,7 +126,19 @@
     "signUp": "Sign up",
     "createAccount": "Create account",
     "signUpSubtitle": "Join to get started",
-    "hasAccount": "Already have an account?"
+    "hasAccount": "Already have an account?",
+    "emailRequired": "Email is required",
+    "emailInvalid": "Enter a valid email",
+    "passwordRequired": "Password is required",
+    "passwordTooShort": "Password must be at least 8 characters",
+    "genericError": "Something went wrong",
+    "googleNoToken": "Google sign-in failed — no ID token received",
+    "googleFailed": "Google sign-in failed",
+    "confirmPassword": "Confirm password",
+    "confirmRequired": "Please confirm your password",
+    "passwordsMismatch": "Passwords do not match",
+    "emailInUse": "This email is already in use",
+    "passwordHint": "Min. 8 characters"
   },
   "thresholds": {
     "title": "Alert Thresholds",
@@ -133,6 +149,9 @@
     "batteryVoltageDesc": "Alert when control module voltage drops below this level.",
     "fuelLevel": "Min Fuel Level",
     "fuelLevelDesc": "Alert when fuel tank level drops below this percentage.",
+    "calibration": "CALIBRATION",
+    "factoryDefaults": "FACTORY DEFAULTS",
+    "resetAction": "Reset",
     "reset": "Reset to Defaults",
     "resetConfirmTitle": "Reset Thresholds",
     "resetConfirmMessage": "Restore all thresholds to their default values?",
@@ -171,7 +190,21 @@
     "wifiHint": "Connect the phone to the adapter's WiFi network first (e.g. WiFi_OBDII, no internet). Defaults work for most clones.",
     "host": "HOST",
     "port": "PORT",
-    "connectWifi": "CONNECT VIA WIFI"
+    "connectWifi": "CONNECT VIA WIFI",
+    "unknownDevice": "Unknown device",
+    "connectedBadge": "CONNECTED",
+    "connectBadge": "CONNECT",
+    "errPermTitle": "Bluetooth permission required",
+    "errPermBody": "Please grant Bluetooth permissions in Settings to scan for OBD adapters.",
+    "errBtOffTitle": "Bluetooth is off",
+    "errBtOffBody": "Please enable Bluetooth to scan for OBD adapters.",
+    "errMock": "Mock adapter failed",
+    "errList": "Bluetooth list failed",
+    "errClassic": "Classic connect failed",
+    "errInvalidTitle": "Invalid",
+    "errInvalidBody": "Enter a valid host and port (e.g. 192.168.0.10 / 35000).",
+    "errWifi": "WiFi connect failed",
+    "errConnection": "Connection failed"
   },
   "settings": {
     "deleteAccount": "Delete account",
@@ -193,6 +226,13 @@
       "subtitle": "Scan for your ELM327 OBD-II adapter. Make sure it's plugged into your car's OBD port.",
       "skip": "Skip for now",
       "connected": "Adapter connected",
+      "connecting": "Connecting…",
+      "noDevices": "No devices found",
+      "devicesFound": "{{count}} device(s) found",
+      "unknownDevice": "Unknown device",
+      "connectedBadge": "CONNECTED",
+      "emptyList": "No Bluetooth devices discovered. Tap Scan to search.",
+      "connectionFailed": "Connection failed",
       "next": "Continue"
     },
     "vin": {

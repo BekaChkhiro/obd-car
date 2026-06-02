@@ -7,6 +7,7 @@ import React, {
 } from 'react';
 import { Animated, StyleSheet, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors } from '@/src/theme/colors';
 
 export type ToastType = 'info' | 'warning' | 'error';
 
@@ -66,7 +67,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }): Reac
         <Animated.View
           style={[styles.container, bgStyle(toast.type), { opacity, top: insets.top + 12 }]}
           pointerEvents="none"
-          accessibilityLiveRegion="polite"
+          accessibilityLiveRegion={toast.type === 'error' ? 'assertive' : 'polite'}
           accessibilityRole="alert"
         >
           <Text style={styles.text}>{toast.message}</Text>
@@ -104,7 +105,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   text: {
-    color: '#fafafa',
+    color: colors.textPrimary,
     fontSize: 13,
     fontWeight: '600',
     textAlign: 'center',

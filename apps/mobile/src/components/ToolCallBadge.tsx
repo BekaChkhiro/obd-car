@@ -12,13 +12,19 @@ interface Props {
   toolCall: ToolCall;
 }
 
+// "read_pid" -> "Read pid" — turns raw tool identifiers into readable labels.
+function humanizeToolName(name: string): string {
+  const spaced = name.replace(/_/g, ' ').trim();
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
 export function ToolCallBadge({ toolCall }: Props) {
   const cfg = STATUS_CONFIG[toolCall.status];
   return (
     <View className={`mt-1 flex-row items-center gap-1.5 self-start rounded-full border px-2.5 py-1 ${cfg.bg} ${cfg.border}`}>
       <View className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
       <Text className={`text-[10px] font-semibold tracking-wider ${cfg.text}`}>
-        {toolCall.name}
+        {humanizeToolName(toolCall.name)}
       </Text>
       <Text className={`text-[9px] font-bold tracking-widest ${cfg.text} opacity-70`}>
         · {cfg.label}

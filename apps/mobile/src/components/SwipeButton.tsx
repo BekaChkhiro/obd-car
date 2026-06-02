@@ -73,6 +73,7 @@ export function SwipeButton({
   const offset = useSharedValue(0);
   const pressed = useSharedValue(0);
   const crossedThreshold = useRef(false);
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const maxOffset = Math.max(0, trackWidth - THUMB_SIZE - TRACK_PADDING * 2);
 
@@ -80,11 +81,18 @@ export function SwipeButton({
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     setCompleted(true);
     onComplete();
-    setTimeout(() => {
+    if (resetTimer.current) clearTimeout(resetTimer.current);
+    resetTimer.current = setTimeout(() => {
       setCompleted(false);
       offset.value = withTiming(0, { duration: 260 });
     }, 650);
   }, [onComplete, offset]);
+
+  useEffect(() => {
+    return () => {
+      if (resetTimer.current) clearTimeout(resetTimer.current);
+    };
+  }, []);
 
   const pingPress = useCallback(() => {
     Haptics.selectionAsync().catch(() => {});
@@ -192,6 +200,12 @@ export function SwipeButton({
   return (
     <View
       onLayout={handleLayout}
+      accessible
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityHint="Swipe right, or double-tap to activate"
+      accessibilityActions={[{ name: 'activate' }]}
+      onAccessibilityAction={handleComplete}
       style={{
         height: HEIGHT,
         borderRadius: HEIGHT / 2,
@@ -212,7 +226,7 @@ export function SwipeButton({
           right: 0,
           top: 0,
           bottom: 0,
-          backgroundColor: '#08080a',
+          backgroundColor: colors.bg,
           opacity: 0.45,
           borderRadius: HEIGHT / 2,
         }}

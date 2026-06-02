@@ -46,12 +46,12 @@ export function PidChart({
         </View>
       ) : (
         <View className="mt-2 flex-row items-end" style={{ height: CHART_HEIGHT, gap: 1 }}>
-          {bars.map((p, i) => {
+          {bars.map((p) => {
             const normalized = Math.max(0, Math.min(1, (p.value - min) / range));
             const heightPx = Math.max(2, Math.round(normalized * CHART_HEIGHT));
             return (
               <View
-                key={i}
+                key={p.ts}
                 style={{
                   flex: 1,
                   height: heightPx,

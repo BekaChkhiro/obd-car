@@ -2,6 +2,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
+import Constants from 'expo-constants';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useBleStore } from '@/src/store/ble';
@@ -90,7 +91,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
 
   return (
-    <View className="flex-1 bg-[#08080a]">
+    <View className="flex-1 bg-bg">
       <StatusBar style="light" />
       <ScrollView
         contentContainerStyle={{
@@ -108,7 +109,7 @@ export default function HomeScreen() {
           </View>
           <View className="rounded-full border border-zinc-800 px-3 py-1.5">
             <Text className="text-[10px] font-semibold tracking-widest text-zinc-500">
-              v1.0
+              v{Constants.expoConfig?.version ?? '1.0'}
             </Text>
           </View>
         </View>

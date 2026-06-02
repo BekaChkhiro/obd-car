@@ -261,7 +261,7 @@ function ChatHeader({ connection, hasMessages, onClear, onOpenHistory }: ChatHea
   return (
     <View
       style={{ paddingTop: insets.top }}
-      className="border-b border-zinc-900 bg-[#08080a]"
+      className="border-b border-zinc-900 bg-bg"
     >
       <View className="flex-row items-center justify-between px-4 pb-3 pt-2">
         <View className="flex-1">
@@ -330,7 +330,7 @@ function InputBar({ onSend, onAbort, disabled }: InputBarProps) {
     // bar. A flat 8 px gap is enough breathing room.
     <View
       style={{ paddingBottom: 8, paddingTop: 8 }}
-      className="border-t border-zinc-900 bg-[#08080a] px-3"
+      className="border-t border-zinc-900 bg-bg px-3"
     >
       <View
         className={`flex-row items-end gap-2 rounded-3xl border bg-zinc-900/60 px-4 py-2.5 ${
@@ -528,7 +528,7 @@ export default function ChatScreen() {
 
   return (
     <KeyboardAvoidingView
-      className="flex-1 bg-[#08080a]"
+      className="flex-1 bg-bg"
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={0}
     >

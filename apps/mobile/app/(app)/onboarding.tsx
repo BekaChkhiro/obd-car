@@ -12,9 +12,11 @@ import {
   ScrollView,
   KeyboardAvoidingView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { State } from 'react-native-ble-plx';
+import { colors } from '@/src/theme/colors';
 import { bleManager } from '@/src/ble/manager';
 import { connectionMachine } from '@/src/ble/connection';
 import { useBleStore, type ScannedDevice } from '@/src/store/ble';
@@ -145,9 +147,9 @@ function PairStep({ onNext, onSkip }: PairStepProps) {
 
   useEffect(() => {
     if (connectionPhase === 'error' && connectionError && retryCount === 0) {
-      Alert.alert('Connection failed', connectionError);
+      Alert.alert(t('onboarding.pair.connectionFailed'), connectionError);
     }
-  }, [connectionPhase, connectionError, retryCount]);
+  }, [connectionPhase, connectionError, retryCount, t]);
 
   async function handleConnect(deviceId: string) {
     stopScan();
@@ -199,33 +201,35 @@ function PairStep({ onNext, onSkip }: PairStepProps) {
         <View>
           {isScanning ? (
             <View className="flex-row items-center gap-2">
-              <ActivityIndicator size="small" color="#22d3ee" />
-              <Text className="ml-2 text-sm text-cyan-300">
+              <ActivityIndicator size="small" color={colors.accent} />
+              <Text className="text-sm text-cyan-300">
                 {t('pair.scanning')}
               </Text>
             </View>
           ) : isConnecting ? (
             <View className="flex-row items-center gap-2">
-              <ActivityIndicator size="small" color="#fbbf24" />
-              <Text className="ml-2 text-sm text-amber-300">Connecting…</Text>
+              <ActivityIndicator size="small" color={colors.warning} />
+              <Text className="text-sm text-amber-300">{t('onboarding.pair.connecting')}</Text>
             </View>
           ) : (
             <Text className="text-sm text-zinc-400">
               {devices.length === 0
-                ? 'No devices found'
-                : `${devices.length} device(s) found`}
+                ? t('onboarding.pair.noDevices')
+                : t('onboarding.pair.devicesFound', { count: devices.length })}
             </Text>
           )}
           {!permissionGranted && Platform.OS === 'android' && (
             <Text className="mt-0.5 text-xs text-red-400">
-              Bluetooth permission denied
+              {t('pair.permissionDenied')}
             </Text>
           )}
         </View>
         <Pressable
           onPress={isScanning ? stopScan : startScan}
           disabled={isConnecting}
-          className={`rounded-lg px-3 py-2 ${
+          accessibilityRole="button"
+          accessibilityLabel={isScanning ? t('pair.stop') : t('pair.scan')}
+          className={`rounded-lg px-4 py-2.5 ${
             isScanning ? 'bg-zinc-800' : isConnecting ? 'bg-zinc-900' : 'bg-cyan-500'
           }`}
         >
@@ -234,7 +238,7 @@ function PairStep({ onNext, onSkip }: PairStepProps) {
               isScanning ? 'text-zinc-300' : isConnecting ? 'text-zinc-600' : 'text-zinc-950'
             }`}
           >
-            {isScanning ? 'STOP' : 'SCAN'}
+            {isScanning ? t('pair.stop') : t('pair.scan')}
           </Text>
         </Pressable>
       </View>
@@ -247,12 +251,15 @@ function PairStep({ onNext, onSkip }: PairStepProps) {
             onPress={() =>
               !isConnecting && connectedDeviceId !== item.id && handleConnect(item.id)
             }
+            accessibilityRole="button"
+            accessibilityLabel={`${item.name ?? t('onboarding.pair.unknownDevice')}, ${rssiLabel(item.rssi)}`}
+            accessibilityState={{ selected: connectedDeviceId === item.id }}
             className="mx-6 mb-2 rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 active:bg-zinc-900"
           >
             <View className="flex-row items-center justify-between">
               <View className="flex-1 mr-3">
                 <Text className="text-sm font-semibold text-zinc-50" numberOfLines={1}>
-                  {item.name ?? 'Unknown device'}
+                  {item.name ?? t('onboarding.pair.unknownDevice')}
                 </Text>
                 <Text className="mt-0.5 text-[11px] text-zinc-500" numberOfLines={1}>
                   {item.id}
@@ -262,7 +269,7 @@ function PairStep({ onNext, onSkip }: PairStepProps) {
                 </Text>
               </View>
               <View
-                className={`rounded-lg px-3 py-2 ${
+                className={`rounded-lg px-3 py-2.5 ${
                   connectedDeviceId === item.id
                     ? 'border border-emerald-500/30 bg-emerald-500/10'
                     : isConnecting
@@ -271,14 +278,14 @@ function PairStep({ onNext, onSkip }: PairStepProps) {
                 }`}
               >
                 {isConnecting && connectedDeviceId !== item.id ? (
-                  <ActivityIndicator size="small" color="#fbbf24" />
+                  <ActivityIndicator size="small" color={colors.warning} />
                 ) : (
                   <Text
                     className={`text-[11px] font-bold tracking-wider ${
                       connectedDeviceId === item.id ? 'text-emerald-300' : 'text-zinc-950'
                     }`}
                   >
-                    {connectedDeviceId === item.id ? 'CONNECTED' : t('pair.connect').toUpperCase()}
+                    {connectedDeviceId === item.id ? t('onboarding.pair.connectedBadge') : t('pair.connect').toUpperCase()}
                   </Text>
                 )}
               </View>
@@ -289,7 +296,7 @@ function PairStep({ onNext, onSkip }: PairStepProps) {
           !isScanning && !isConnecting ? (
             <View className="mt-6 items-center px-8">
               <Text className="text-center text-sm text-zinc-500">
-                No Bluetooth devices discovered. Tap Scan to search.
+                {t('onboarding.pair.emptyList')}
               </Text>
             </View>
           ) : null
@@ -297,7 +304,7 @@ function PairStep({ onNext, onSkip }: PairStepProps) {
         contentContainerStyle={{ paddingBottom: 100 }}
       />
 
-      <View className="absolute bottom-0 left-0 right-0 bg-[#08080a] px-6 pb-6 pt-3">
+      <View className="absolute bottom-0 left-0 right-0 bg-bg px-6 pb-6 pt-3">
         <Pressable
           onPress={onSkip}
           className="items-center rounded-2xl border border-zinc-800 py-3 active:bg-zinc-900"
@@ -348,7 +355,7 @@ function VinStep({ onNext, onSkip }: VinStepProps) {
   return (
     <KeyboardAvoidingView
       className="flex-1"
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView
         className="flex-1"
@@ -378,8 +385,8 @@ function VinStep({ onNext, onSkip }: VinStepProps) {
               >
                 {vinStatus === 'reading' ? (
                   <>
-                    <ActivityIndicator size="small" color="#a1a1aa" />
-                    <Text className="ml-2 text-sm font-semibold text-zinc-400">
+                    <ActivityIndicator size="small" color={colors.textSecondary} />
+                    <Text className="text-sm font-semibold text-zinc-400">
                       {t('onboarding.vin.autoReading')}
                     </Text>
                   </>
@@ -414,7 +421,7 @@ function VinStep({ onNext, onSkip }: VinStepProps) {
                 value={vin}
                 onChangeText={setVin}
                 placeholder={t('onboarding.vin.placeholder')}
-                placeholderTextColor="#52525b"
+                placeholderTextColor={colors.textDim}
                 autoCapitalize="characters"
                 maxLength={17}
                 className="rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm font-mono text-zinc-50"
@@ -479,20 +486,23 @@ function LanguageStep({ onFinish }: LanguageStepProps) {
           <Pressable
             key={lng}
             onPress={() => setLocale(lng)}
-            className={`flex-1 items-center rounded-xl py-5 ${
-              locale === lng ? 'bg-zinc-100' : 'bg-transparent'
+            accessibilityRole="radio"
+            accessibilityState={{ selected: locale === lng }}
+            accessibilityLabel={lng === 'en' ? 'English' : 'ქართული'}
+            className={`flex-1 items-center rounded-xl py-4 ${
+              locale === lng ? 'bg-accent/10' : 'bg-transparent'
             }`}
           >
             <Text
               className={`text-sm font-bold tracking-wider ${
-                locale === lng ? 'text-zinc-950' : 'text-zinc-400'
+                locale === lng ? 'text-accent' : 'text-zinc-400'
               }`}
             >
               {lng === 'en' ? 'ENGLISH' : 'ქართული'}
             </Text>
             <Text
               className={`mt-1 text-[10px] tracking-widest ${
-                locale === lng ? 'text-zinc-600' : 'text-zinc-600'
+                locale === lng ? 'text-cyan-600' : 'text-zinc-600'
               }`}
             >
               {lng === 'en' ? 'EN' : 'KA'}
@@ -531,11 +541,17 @@ export default function OnboardingScreen() {
   }
 
   return (
-    <View className="flex-1 bg-[#08080a]">
+    <SafeAreaView className="flex-1 bg-bg" edges={['top', 'bottom']}>
       {step > 0 && (
-        <View className="flex-row items-center gap-3 px-6 pb-2 pt-5">
-          <Pressable onPress={() => setStep((s) => s - 1)}>
-            <Text className="text-sm font-semibold text-cyan-400">← Back</Text>
+        <View className="flex-row items-center gap-3 px-6 pb-2 pt-3">
+          <Pressable
+            onPress={() => setStep((s) => s - 1)}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.back')}
+            hitSlop={12}
+            className="-ml-2 p-2"
+          >
+            <Text className="text-sm font-semibold text-cyan-400">← {t('common.back')}</Text>
           </Pressable>
           <View className="flex-1 flex-row gap-1">
             {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
@@ -555,6 +571,6 @@ export default function OnboardingScreen() {
       {step === 1 && <PairStep onNext={goNext} onSkip={goNext} />}
       {step === 2 && <VinStep onNext={goNext} onSkip={goNext} />}
       {step === 3 && <LanguageStep onFinish={finish} />}
-    </View>
+    </SafeAreaView>
   );
 }
