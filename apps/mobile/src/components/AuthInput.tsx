@@ -8,18 +8,20 @@ interface Props extends TextInputProps {
 
 const AuthInput = forwardRef<TextInput, Props>(({ label, error, ...props }, ref) => (
   <View className="mb-4">
-    <Text className="mb-1 text-sm font-medium text-gray-700">{label}</Text>
+    <Text className="mb-1.5 text-[10px] font-bold tracking-[2px] text-zinc-500">
+      {label.toUpperCase()}
+    </Text>
     <TextInput
       ref={ref}
-      className={`rounded-xl border px-4 py-3 text-base text-gray-900 bg-white ${
-        error ? 'border-red-500' : 'border-gray-300'
+      className={`rounded-xl border bg-zinc-900/60 px-4 py-3 text-base text-zinc-50 ${
+        error ? 'border-red-500/60' : 'border-zinc-800'
       }`}
-      placeholderTextColor="#9ca3af"
+      placeholderTextColor="#52525b"
       autoCapitalize="none"
       autoCorrect={false}
       {...props}
     />
-    {error ? <Text className="mt-1 text-xs text-red-500">{error}</Text> : null}
+    {error ? <Text className="mt-1.5 text-xs text-red-400">{error}</Text> : null}
   </View>
 ));
 

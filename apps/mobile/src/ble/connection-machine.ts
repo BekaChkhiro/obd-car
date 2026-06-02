@@ -1,4 +1,5 @@
 import type { BleManager, Device, Subscription } from 'react-native-ble-plx';
+import { ConnectionPriority } from 'react-native-ble-plx';
 import type { ConnectionPhase } from '../store/ble';
 import type { ConnectedAdapter } from './manager';
 import { createElm327Client } from './manager';
@@ -89,8 +90,17 @@ export class ConnectionMachine {
     this.transition('connecting');
 
     try {
-      const device = await this.ble.connectToDevice(deviceId);
+      // requestMTU=247 lets ELM frames arrive in one notification instead of
+      // being split across 20-byte BLE chunks (default MTU). Cheap HM-10
+      // clones honor this; some ignore it silently, which is fine.
+      const device = await this.ble.connectToDevice(deviceId, { requestMTU: 247 });
       await device.discoverAllServicesAndCharacteristics();
+
+      // Ask Android to keep the link in high-priority mode (~10–20 ms
+      // interval) instead of dropping to low-power mode when traffic pauses.
+      // Many ELM327 clones drop the connection during the first idle window
+      // if the phone slips into the default balanced interval.
+      await device.requestConnectionPriority(ConnectionPriority.High).catch(() => undefined);
 
       const protocolOverride = this.store.getProtocolOverride();
       const adapter = await createElm327Client(device, {

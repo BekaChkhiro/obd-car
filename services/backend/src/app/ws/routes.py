@@ -69,6 +69,7 @@ router = APIRouter(tags=["ws"])
 
 _CLOSE_UNAUTHORIZED = 4001
 _CLOSE_BAD_PROTOCOL = 4002
+_CLOSE_FORBIDDEN = 4003
 
 # How many recent outbound frames to remember for resume replay. Sized for a
 # typical assistant turn (start + many text_delta + a few tool events + end +
@@ -461,6 +462,17 @@ async def ws_session(
     # Reuse an existing diagnostic_session row if it already exists (e.g. on
     # reconnect with the same session_id); otherwise create one.
     existing = await db.get(DiagnosticSession, session_id)
+    if existing is not None and existing.user_id != user_id:
+        # Session UUIDs are not secrets — without this ownership check, any
+        # authenticated user who learned a session_id could attach to it.
+        log.warning(
+            "ws_session_hijack_attempt",
+            session_id=session_id,
+            requesting_user_id=user_id,
+            owner_user_id=existing.user_id,
+        )
+        await websocket.close(code=_CLOSE_FORBIDDEN)
+        return
     if existing is None:
         ds = DiagnosticSession(
             id=session_id,

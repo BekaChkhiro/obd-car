@@ -1,5 +1,7 @@
 import { Redirect, Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { useAuthStore } from '@/src/store/auth';
+import { colors } from '@/src/theme/colors';
 
 export default function AppLayout() {
   const user = useAuthStore((s) => s.user);
@@ -10,15 +12,21 @@ export default function AppLayout() {
   }
 
   return (
-    <Stack>
-      <Stack.Screen name="index" options={{ title: 'OBD Car' }} />
-      <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-      <Stack.Screen name="pair" options={{ title: 'Connect Adapter' }} />
-      <Stack.Screen name="dashboard" options={{ title: 'Dashboard' }} />
-      <Stack.Screen name="threshold-settings" options={{ title: 'Alert Thresholds' }} />
-      <Stack.Screen name="chat" options={{ title: 'AI Assistant' }} />
-      <Stack.Screen name="history" options={{ title: 'Session History' }} />
-      <Stack.Screen name="history/[id]" options={{ title: 'Session' }} />
-    </Stack>
+    <>
+      <StatusBar style="light" />
+      <Stack
+        screenOptions={{
+          headerStyle: { backgroundColor: colors.bg },
+          headerTintColor: colors.textPrimary,
+          headerTitleStyle: { fontWeight: '600', fontSize: 16 },
+          headerShadowVisible: false,
+          contentStyle: { backgroundColor: colors.bg },
+        }}
+      >
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+        <Stack.Screen name="threshold-settings" options={{ title: 'Alert Thresholds' }} />
+      </Stack>
+    </>
   );
 }

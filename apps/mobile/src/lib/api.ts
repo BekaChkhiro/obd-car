@@ -126,6 +126,8 @@ export const authApi = {
       body: JSON.stringify({ id_token: idToken }),
     }),
 
+  me: () => apiFetch<import('../types/auth').UserPublic>('/auth/me'),
+
   deleteAccount: (): Promise<void> =>
     apiFetch<void>('/auth/me', { method: 'DELETE' }),
 };

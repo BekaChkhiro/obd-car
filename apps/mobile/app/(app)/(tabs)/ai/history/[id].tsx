@@ -13,9 +13,9 @@ function MessageBubble({ msg }: { msg: Message }) {
 
   if (isToolResult) {
     return (
-      <View className="mb-2 mx-4 rounded-xl bg-gray-900 px-3 py-2">
-        <Text className="text-xs font-semibold text-gray-500 uppercase tracking-wide">tool result</Text>
-        <Text className="mt-0.5 text-xs text-gray-400" numberOfLines={3}>{msg.content}</Text>
+      <View className="mb-2 mx-4 rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 py-2">
+        <Text className="text-[10px] font-bold tracking-[2px] text-zinc-500">TOOL RESULT</Text>
+        <Text className="mt-1 text-xs text-zinc-400" numberOfLines={3}>{msg.content}</Text>
       </View>
     );
   }
@@ -24,14 +24,14 @@ function MessageBubble({ msg }: { msg: Message }) {
     <View className={`mb-3 px-4 ${isUser ? 'items-end' : 'items-start'}`}>
       <View
         className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${
-          isUser ? 'rounded-tr-sm bg-blue-600' : 'rounded-tl-sm bg-gray-800'
+          isUser ? 'rounded-tr-sm bg-cyan-500' : 'rounded-tl-sm border border-zinc-800 bg-zinc-900'
         }`}
       >
-        <Text className={`text-sm leading-5 ${isUser ? 'text-white' : 'text-gray-100'}`}>
+        <Text className={`text-sm leading-5 ${isUser ? 'text-zinc-950' : 'text-zinc-100'}`}>
           {msg.content}
         </Text>
       </View>
-      <Text className="mt-0.5 text-xs text-gray-600">
+      <Text className="mt-0.5 text-[10px] text-zinc-600">
         {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
       </Text>
     </View>
@@ -48,11 +48,9 @@ function SessionHeader({ session, vehicle }: { session: Session; vehicle: Vehicl
     : null;
 
   return (
-    <View className="mx-4 mb-4 rounded-2xl bg-gray-800/50 px-4 py-3">
-      <Text className="text-xs font-semibold uppercase tracking-widest text-gray-500">
-        Session
-      </Text>
-      <Text className="mt-1 text-sm text-gray-300">
+    <View className="mx-4 mb-4 rounded-2xl border border-zinc-800 bg-zinc-900/50 px-4 py-3">
+      <Text className="text-[10px] font-bold tracking-[2px] text-zinc-500">SESSION</Text>
+      <Text className="mt-2 text-sm font-semibold text-zinc-100">
         {new Date(session.created_at).toLocaleString([], {
           month: 'short',
           day: 'numeric',
@@ -62,7 +60,7 @@ function SessionHeader({ session, vehicle }: { session: Session; vehicle: Vehicl
         })}
       </Text>
       {vehicleLabel ? (
-        <Text className="mt-1 text-xs text-gray-500">Vehicle: {vehicleLabel}</Text>
+        <Text className="mt-1 text-xs text-zinc-500">{vehicleLabel}</Text>
       ) : null}
     </View>
   );
@@ -96,7 +94,7 @@ export default function SessionDetailScreen() {
 
   return (
     <FlatList
-      className="flex-1 bg-gray-950"
+      className="flex-1 bg-[#08080a]"
       contentContainerStyle={{ paddingTop: 12, paddingBottom: 40 }}
       data={messages}
       keyExtractor={(item) => item.id}
@@ -104,7 +102,7 @@ export default function SessionDetailScreen() {
       ListHeaderComponent={session ? <SessionHeader session={session} vehicle={vehicle} /> : null}
       ListEmptyComponent={
         <View className="items-center justify-center px-6 py-12">
-          <Text className="text-center text-sm text-gray-500">No messages in this session.</Text>
+          <Text className="text-center text-sm text-zinc-500">No messages in this session.</Text>
         </View>
       }
     />

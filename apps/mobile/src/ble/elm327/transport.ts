@@ -107,5 +107,24 @@ export async function discoverElmProfile(
       return profile;
     }
   }
+  // Fallback: scan every service for a usable notify + write characteristic
+  // pair. Many ELM327 clones use custom UUIDs that don't match the well-known
+  // FFE0/FFF0/Nordic profiles.
+  for (const service of services) {
+    const characteristics = await service.characteristics();
+    const notifyChar = characteristics.find((c) => c.isNotifiable || c.isIndicatable);
+    const writeChar =
+      characteristics.find((c) => c.isWritableWithResponse || c.isWritableWithoutResponse) ?? notifyChar;
+    if (notifyChar && writeChar) {
+      const supportsWriteWithoutResponse =
+        writeChar.isWritableWithoutResponse === true;
+      return {
+        serviceUUID: service.uuid,
+        notifyCharacteristicUUID: notifyChar.uuid,
+        writeCharacteristicUUID: writeChar.uuid,
+        withResponse: !supportsWriteWithoutResponse,
+      };
+    }
+  }
   return null;
 }

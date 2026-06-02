@@ -1,6 +1,8 @@
 import { createMMKV } from 'react-native-mmkv';
 import type { Elm327Client } from './elm327/client';
 import { Elm327Error } from './elm327/errors';
+import { parseObdResponse } from './elm327/parser';
+import { recordProbeAttempt, resetProbeTrace, summarizeTrace } from './diagnostics';
 
 const storage = createMMKV({ id: 'obd-protocol' });
 
@@ -22,7 +24,11 @@ const PROBE_SEQUENCE = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
 
 // Mode 01 PID 00 — supported-PIDs bitmap; every OBD-II ECU responds to this.
 const PROBE_COMMAND = '0100';
-const PROBE_TIMEOUT_MS = 5_000;
+// After ATSP0 the adapter searches every protocol internally before returning
+// data; slow clones routinely take 8–10 s on the first try. ISO 9141/KWP
+// slow-init also pushes single-protocol probes past 5 s. 12 s gives both
+// paths enough headroom without making the user wait forever.
+const PROBE_TIMEOUT_MS = 12_000;
 const ATSP_TIMEOUT_MS = 3_000;
 
 export interface ProtocolNegotiationOptions {
@@ -64,21 +70,76 @@ export function clearCachedProtocol(id: string): void {
 }
 
 async function probeProtocol(client: Elm327Client, n: number): Promise<boolean> {
+  const started = Date.now();
+  let frame: string | null = null;
+  let lastError: unknown = null;
+
+  // Close any previously selected protocol so the adapter starts from a clean
+  // bus state. Cheap clones routinely return spurious "CAN ERROR" responses if
+  // we hop between ATSPn values without an explicit protocol-close in between.
+  try {
+    await client.sendCommand('ATPC', {
+      priority: 'high',
+      retries: 0,
+      timeoutMs: ATSP_TIMEOUT_MS,
+    });
+  } catch {
+    // Non-fatal — some adapters return an error if no protocol is currently
+    // open; we just want a best-effort reset before ATSPn.
+  }
+
   try {
     await client.sendCommand(`ATSP${n}`, {
       priority: 'high',
       retries: 0,
       timeoutMs: ATSP_TIMEOUT_MS,
     });
-    await client.sendCommand(PROBE_COMMAND, {
-      priority: 'high',
-      retries: 0,
-      timeoutMs: PROBE_TIMEOUT_MS,
+  } catch (err) {
+    recordProbeAttempt({
+      protocol: n,
+      command: `ATSP${n}`,
+      response: null,
+      error: err instanceof Error ? err.message : String(err),
+      durationMs: Date.now() - started,
     });
-    return true;
-  } catch {
     return false;
   }
+
+  // Some clones drop the first request after protocol switch (CAN clones in
+  // particular often respond with "CAN ERROR" once, then work). Retry 0100
+  // once with a short settling delay before treating the protocol as dead.
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      frame = await client.sendCommand(PROBE_COMMAND, {
+        priority: 'high',
+        retries: 0,
+        timeoutMs: PROBE_TIMEOUT_MS,
+      });
+      parseObdResponse(frame, 0x01, 0x00);
+      recordProbeAttempt({
+        protocol: n,
+        command: PROBE_COMMAND,
+        response: frame,
+        error: null,
+        durationMs: Date.now() - started,
+      });
+      return true;
+    } catch (err) {
+      lastError = err;
+      if (attempt === 0) {
+        await new Promise((r) => setTimeout(r, 350));
+      }
+    }
+  }
+
+  recordProbeAttempt({
+    protocol: n,
+    command: PROBE_COMMAND,
+    response: frame,
+    error: lastError instanceof Error ? lastError.message : String(lastError),
+    durationMs: Date.now() - started,
+  });
+  return false;
 }
 
 /**
@@ -98,6 +159,7 @@ export async function negotiateProtocol(
 ): Promise<NegotiatedProtocol> {
   const { override, cacheKey } = options;
 
+  resetProbeTrace();
   const nameOf = (n: number) => OBD_PROTOCOL_NAMES[n] ?? String(n);
 
   if (override !== undefined) {
@@ -132,8 +194,11 @@ export async function negotiateProtocol(
     }
   }
 
+  // Surface the raw probe trace inline so the user can see exactly what each
+  // protocol returned. Crucial when another OBD app *does* connect — the
+  // difference shows up here.
   throw new Elm327Error(
     'no-protocol',
-    'No OBD protocol matched after probing ATSP0–ATSP9. Ensure the vehicle ignition is on and the ELM327 adapter is fully seated in the OBD port.',
+    `No OBD protocol matched after probing ATSP0–ATSP9.\n\n${summarizeTrace()}\n\nEnsure the vehicle ignition is on and the ELM327 adapter is fully seated in the OBD port.`,
   );
 }

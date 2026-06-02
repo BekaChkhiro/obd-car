@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "planflow-mcp": {
+      "type": "stdio",
+      "command": "planflow-mcp",
+      "args": [],
+      "env": {}
+    }
+  }
+}

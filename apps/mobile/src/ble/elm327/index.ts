@@ -15,6 +15,16 @@ export {
   type ElmTransport,
 } from './transport';
 export {
+  TcpElmTransport,
+  DEFAULT_TCP_ELM_CONFIG,
+  type TcpElmTransportConfig,
+} from './tcp-transport';
+export {
+  ClassicElmTransport,
+  getPairedClassicDevices,
+  type ClassicElmTransportConfig,
+} from './classic-transport';
+export {
   Elm327Client,
   ELM_INIT_COMMANDS,
   type Elm327ClientOptions,

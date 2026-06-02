@@ -86,19 +86,24 @@ export default function SignInScreen() {
 
   return (
     <KeyboardAvoidingView
-      className="flex-1 bg-gray-50"
+      className="flex-1 bg-[#08080a]"
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView
         contentContainerClassName="flex-grow justify-center px-6 py-12"
         keyboardShouldPersistTaps="handled"
       >
-        <Text className="mb-2 text-center text-3xl font-bold text-gray-900">Welcome back</Text>
-        <Text className="mb-8 text-center text-gray-500">Sign in to your account</Text>
+        <Text className="text-center text-[10px] font-bold tracking-[3px] text-zinc-500">
+          OBD-II  ·  DIAGNOSTICS
+        </Text>
+        <Text className="mt-2 text-center text-3xl font-bold text-zinc-50">Welcome back</Text>
+        <Text className="mb-8 mt-2 text-center text-sm text-zinc-500">
+          Sign in to your account
+        </Text>
 
         {serverError ? (
-          <View className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
-            <Text className="text-sm text-red-700">{serverError}</Text>
+          <View className="mb-4 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3">
+            <Text className="text-sm text-red-300">{serverError}</Text>
           </View>
         ) : null}
 
@@ -127,33 +132,33 @@ export default function SignInScreen() {
         <Pressable
           onPress={handleLogin}
           disabled={isLoading}
-          className="mb-4 items-center rounded-xl bg-blue-600 py-4 disabled:opacity-50"
+          className="mb-4 items-center rounded-xl bg-cyan-500 py-4 active:bg-cyan-600 disabled:opacity-50"
         >
           {isLoading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color="#08080a" />
           ) : (
-            <Text className="text-base font-semibold text-white">Sign in</Text>
+            <Text className="text-base font-bold tracking-wider text-zinc-950">SIGN IN</Text>
           )}
         </Pressable>
 
         <View className="mb-6 flex-row items-center">
-          <View className="flex-1 border-t border-gray-200" />
-          <Text className="mx-3 text-sm text-gray-400">or</Text>
-          <View className="flex-1 border-t border-gray-200" />
+          <View className="flex-1 border-t border-zinc-800" />
+          <Text className="mx-3 text-[10px] font-semibold tracking-widest text-zinc-600">OR</Text>
+          <View className="flex-1 border-t border-zinc-800" />
         </View>
 
         <Pressable
           onPress={handleGoogle}
           disabled={isLoading}
-          className="mb-8 flex-row items-center justify-center rounded-xl border border-gray-300 bg-white py-4 disabled:opacity-50"
+          className="mb-8 flex-row items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/60 py-4 active:bg-zinc-900 disabled:opacity-50"
         >
-          <Text className="text-base font-medium text-gray-700">Continue with Google</Text>
+          <Text className="text-sm font-semibold text-zinc-200">Continue with Google</Text>
         </Pressable>
 
         <View className="flex-row justify-center">
-          <Text className="text-sm text-gray-500">Don't have an account? </Text>
+          <Text className="text-sm text-zinc-500">Don't have an account? </Text>
           <Link href="/(auth)/sign-up">
-            <Text className="text-sm font-semibold text-blue-600">Sign up</Text>
+            <Text className="text-sm font-semibold text-cyan-400">Sign up</Text>
           </Link>
         </View>
 
@@ -161,7 +166,7 @@ export default function SignInScreen() {
           <Pressable
             testID="e2e-skip-sign-in"
             onPress={handleE2eSignIn}
-            className="mt-8 items-center rounded-xl bg-purple-600 py-3"
+            className="mt-8 items-center rounded-xl bg-violet-600 py-3"
           >
             <Text className="text-sm font-semibold text-white">E2E: Skip sign-in</Text>
           </Pressable>

@@ -6,6 +6,7 @@ initSentry();
 
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useAuthStore } from '@/src/store/auth';
 import { SQLiteProvider } from '@/src/db';
 import { runMigrations } from '@/src/db/migrations';
@@ -24,15 +25,17 @@ function RootLayoutInner() {
   }
 
   return (
-    <SQLiteProvider databaseName={DB_NAME} onInit={runMigrations}>
-      <ToastProvider>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="(app)" />
-          <Stack.Screen name="index" redirect />
-        </Stack>
-      </ToastProvider>
-    </SQLiteProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SQLiteProvider databaseName={DB_NAME} onInit={runMigrations}>
+        <ToastProvider>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(app)" />
+            <Stack.Screen name="index" redirect />
+          </Stack>
+        </ToastProvider>
+      </SQLiteProvider>
+    </GestureHandlerRootView>
   );
 }
 

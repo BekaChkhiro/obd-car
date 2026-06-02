@@ -2,6 +2,30 @@ import { create } from 'zustand';
 import type { ChatMessage, ToolCall } from '../types/chat';
 import { ChatClient, type ChatConnectionState } from '../chat/client';
 import type { ServerFrame } from '../chat/protocol';
+import { connectionMachine } from '../ble/connection';
+
+// Mandatory OBD-II Mode 1 PIDs that every adapter-equipped vehicle supports.
+// Passed to the backend in the `register` frame so the AI knows it has live
+// vehicle data available even before any tool runs.
+const COMMON_SUPPORTED_PIDS = [
+  '0100', // PIDs supported [01–20]
+  '0101', // Monitor status
+  '0103', // Fuel system status
+  '0104', // Engine load
+  '0105', // Coolant temperature
+  '010B', // Intake manifold pressure
+  '010C', // Engine RPM
+  '010D', // Vehicle speed
+  '010E', // Timing advance
+  '010F', // Intake air temperature
+  '0111', // Throttle position
+  '011C', // OBD standards
+  '011F', // Runtime since engine start
+  '0121', // Distance with MIL on
+  '012F', // Fuel level
+  '0142', // Control module voltage
+  '0146', // Ambient air temperature
+];
 
 function shortId(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -202,10 +226,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
       // Already connected/connecting to the same session — leave it alone.
       return;
     }
+    // Snapshot adapter state at chat-open time so the backend's register payload
+    // tells the AI whether vehicle data is reachable. Without this the
+    // supported_pids list is empty and Claude assumes "no adapter".
+    const adapter = connectionMachine.getAdapter();
+    const supportedPids = adapter ? COMMON_SUPPORTED_PIDS : [];
     client = new ChatClient({
       token,
       sessionId,
       locale: locale ?? 'en',
+      supportedPids,
       onFrame: (frame) => applyFrame(set, frame),
       onStateChange: (s) => set(() => ({ connection: s })),
     });

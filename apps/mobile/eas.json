@@ -41,8 +41,8 @@
         "buildType": "apk"
       },
       "env": {
-        "API_URL": "https://api-preview.obd-car.example.com",
-        "WS_URL": "wss://api-preview.obd-car.example.com",
+        "API_URL": "https://obd-ai-backend.fly.dev",
+        "WS_URL": "wss://obd-ai-backend.fly.dev",
         "SENTRY_DSN": "",
         "GOOGLE_IOS_CLIENT_ID": "",
         "GOOGLE_ANDROID_CLIENT_ID": ""
@@ -60,8 +60,8 @@
         "credentialsSource": "remote"
       },
       "env": {
-        "API_URL": "https://api.obd-car.example.com",
-        "WS_URL": "wss://api.obd-car.example.com",
+        "API_URL": "https://obd-ai-backend.fly.dev",
+        "WS_URL": "wss://obd-ai-backend.fly.dev",
         "SENTRY_DSN": "",
         "GOOGLE_IOS_CLIENT_ID": "",
         "GOOGLE_ANDROID_CLIENT_ID": ""

@@ -17,15 +17,29 @@ export function isHexByteString(token: string): boolean {
 export function parseHexBytes(frame: string): number[] {
   const cleaned = cleanFrame(frame);
   if (!cleaned) return [];
-  const tokens = cleaned.split(' ').filter(Boolean);
+  // Normalise both styles ELM produces:
+  //   "41 0C 0F A0"  — ATS1 (spaces on, default)
+  //   "410C0FA0"     — ATS0 (spaces off — what the init sequence sends)
+  // Multi-line CAN responses can also carry a frame index prefix like "0:" or
+  // "1:" that must be stripped before parsing.
+  const stripped = cleaned
+    .split(' ')
+    .map((tok) => tok.replace(/^\d+:/, ''))
+    .filter(Boolean)
+    .join('');
+  if (!/^[0-9A-Fa-f]+$/.test(stripped)) {
+    throw new Elm327Error('protocol', `Invalid hex characters in "${cleaned}"`, {
+      response: frame,
+    });
+  }
+  if (stripped.length % 2 !== 0) {
+    throw new Elm327Error('protocol', `Odd hex digit count in "${cleaned}"`, {
+      response: frame,
+    });
+  }
   const bytes: number[] = [];
-  for (const tok of tokens) {
-    if (!isHexByteString(tok)) {
-      throw new Elm327Error('protocol', `Invalid hex byte token "${tok}"`, {
-        response: frame,
-      });
-    }
-    bytes.push(parseInt(tok, 16));
+  for (let i = 0; i < stripped.length; i += 2) {
+    bytes.push(parseInt(stripped.slice(i, i + 2), 16));
   }
   return bytes;
 }
@@ -35,7 +49,11 @@ export function parseObdResponse(
   requestedMode: number,
   requestedPid: number,
 ): ParsedObdResponse {
-  const cleaned = cleanFrame(frame);
+  // After ATSP0 the adapter often prints "SEARCHING..." while it tries each
+  // protocol, then appends the real response — e.g. "SEARCHING...41 0C 0F A0".
+  // Strip that prefix before running error detection so we don't misclassify a
+  // valid frame as a transient "searching" error.
+  const cleaned = cleanFrame(frame).replace(/SEARCHING\.{0,3}\s*/gi, '').trim();
 
   const errorKind = detectElmError(cleaned);
   if (errorKind) {

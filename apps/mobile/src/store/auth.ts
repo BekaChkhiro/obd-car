@@ -42,7 +42,14 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   hydrate: async () => {
     await hydrateTokens();
-    set({ isHydrated: true });
+    try {
+      const user = await authApi.me();
+      set({ user, isHydrated: true });
+    } catch {
+      clearInMemoryTokens();
+      await clearTokens();
+      set({ user: null, isHydrated: true });
+    }
   },
 
   register: async (email, password) => {

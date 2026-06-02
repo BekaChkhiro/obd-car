@@ -34,8 +34,10 @@ class Settings(BaseSettings):
     # Rate limit for AI assistant turns per user (WebSocket user_message frames)
     ai_rate_limit: str = "20/hour"
 
-    # Maximum total tokens (input + output) per WebSocket session; 0 = unlimited
-    session_token_budget: int = 0
+    # Maximum total tokens (input + output) per WebSocket session; 0 = unlimited.
+    # Default sized to fit one user's session within a budget while leaving
+    # headroom for the 200K Claude context window.
+    session_token_budget: int = 200000
 
     @property
     def cors_origins_list(self) -> list[str]:

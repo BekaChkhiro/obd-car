@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.obdcar.mobile"
+      "bundleIdentifier": "com.beka.obdcar"
     },
     "android": {
       "adaptiveIcon": {
@@ -26,9 +26,13 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "permissions": [
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_ADMIN",
         "android.permission.BLUETOOTH_SCAN",
         "android.permission.BLUETOOTH_CONNECT",
-        "android.permission.ACCESS_FINE_LOCATION"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE"
       ]
     },
     "web": {
@@ -38,18 +42,33 @@
     },
     "plugins": [
       "expo-router",
-      "expo-dev-client",
       [
         "react-native-ble-plx",
         {
           "isBackgroundEnabled": false,
-          "modes": ["peripheral", "central"],
+          "modes": [
+            "peripheral",
+            "central"
+          ],
           "bluetoothAlwaysPermission": "Allow $(PRODUCT_NAME) to connect to Bluetooth devices"
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "apiUrl": "http://localhost:8000",
+      "wsUrl": "ws://localhost:8000",
+      "googleIosClientId": "",
+      "googleAndroidClientId": "",
+      "sentryDsn": "",
+      "e2e": false,
+      "router": {},
+      "eas": {
+        "projectId": "6e0568c6-09f7-401b-b154-4f12d8e9290f"
+      }
+    },
+    "owner": "infinity.ge"
   }
 }

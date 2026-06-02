@@ -1,0 +1,1 @@
+{"taskId":"T6.3","status":"done","phase":"complete","prUrl":"https://github.com/BekaChkhiro/obd-car/pull/46","summary":"130 TS unit tests added (83 jest for mobile BLE, 47 vitest for obd-protocol). PR #46 merged into main.","branch":"task/T6.3-unit-tests","lastUpdate":"2026-05-19T16:11:00Z","finishedAt":"2026-05-19T16:11:00Z"}

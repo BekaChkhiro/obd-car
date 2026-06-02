@@ -72,14 +72,14 @@ export function ToastProvider({ children }: { children: React.ReactNode }): Reac
   );
 }
 
-function bgStyle(type: ToastType): { backgroundColor: string } {
+function bgStyle(type: ToastType): { backgroundColor: string; borderColor: string } {
   switch (type) {
     case 'warning':
-      return { backgroundColor: '#f59e0b' };
+      return { backgroundColor: 'rgba(251, 191, 36, 0.12)', borderColor: 'rgba(251, 191, 36, 0.35)' };
     case 'error':
-      return { backgroundColor: '#ef4444' };
+      return { backgroundColor: 'rgba(248, 113, 113, 0.12)', borderColor: 'rgba(248, 113, 113, 0.35)' };
     default:
-      return { backgroundColor: '#3b82f6' };
+      return { backgroundColor: 'rgba(34, 211, 238, 0.12)', borderColor: 'rgba(34, 211, 238, 0.35)' };
   }
 }
 
@@ -90,18 +90,19 @@ const styles = StyleSheet.create({
     left: 16,
     right: 16,
     borderRadius: 12,
+    borderWidth: 1,
     paddingVertical: 12,
     paddingHorizontal: 16,
     zIndex: 9999,
     shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 6,
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
   },
   text: {
-    color: '#fff',
-    fontSize: 14,
+    color: '#fafafa',
+    fontSize: 13,
     fontWeight: '600',
     textAlign: 'center',
   },

@@ -1,0 +1,1 @@
+{"taskId":"T3.3","status":"done","phase":"complete","prUrl":"https://github.com/BekaChkhiro/obd-car/pull/25","summary":"Renamed read_live_pid to read_pid, added read_battery_voltage tool, regenerated obd-tools.json. PR #25 merged into main.","branch":"task/T3.3-tool-schemas","lastUpdate":"2026-05-19T21:42:10Z","finishedAt":"2026-05-19T21:42:10Z"}

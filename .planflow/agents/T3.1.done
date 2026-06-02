@@ -1,0 +1,1 @@
+{"taskId":"T3.1","status":"done","phase":"complete","prUrl":"https://github.com/BekaChkhiro/obd-car/pull/22","summary":"WebSocket session endpoint implemented and merged into main. DiagnosticSession model added, 8 tests passing, 0 recoveries.","branch":"task/T3.1-websocket-session-endpoint","lastUpdate":"2026-05-18T21:21:08Z","finishedAt":"2026-05-18T21:21:08Z"}

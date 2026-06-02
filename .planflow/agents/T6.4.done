@@ -1,0 +1,1 @@
+{"taskId":"T6.4","status":"done","phase":"complete","prUrl":"https://github.com/BekaChkhiro/obd-car/pull/47","summary":"Maestro E2E happy path (mock adapter → chat → DTC clear) + Android emulator CI workflow. PR #47 merged into main.","branch":"task/T6.4-e2e-happy-path","lastUpdate":"2026-05-19T12:21:45Z","finishedAt":"2026-05-19T12:21:45Z"}

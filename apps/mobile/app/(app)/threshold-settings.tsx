@@ -26,30 +26,29 @@ function ThresholdField({ label, description, value, unit, onCommit }: FieldProp
   }
 
   return (
-    <View style={{ marginBottom: 20 }}>
-      <Text style={{ color: '#f1f5f9', fontWeight: '600', marginBottom: 2 }}>{label}</Text>
-      <Text style={{ color: '#64748b', fontSize: 12, marginBottom: 8 }}>{description}</Text>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <TextInput
-          style={{
-            flex: 1,
-            borderRadius: 10,
-            borderWidth: 1,
-            borderColor: error ? '#ef4444' : '#334155',
-            backgroundColor: '#1e293b',
-            color: '#f1f5f9',
-            paddingVertical: 10,
-            paddingHorizontal: 14,
-            fontSize: 16,
-          }}
-          keyboardType="numeric"
-          value={text}
-          onChangeText={(t) => { setText(t); setError(''); }}
-          onBlur={handleBlur}
-        />
-        <Text style={{ color: '#64748b', width: 36 }}>{unit}</Text>
+    <View className="mb-5">
+      <Text className="text-sm font-semibold text-zinc-50">{label}</Text>
+      <Text className="mt-1 text-xs text-zinc-500">{description}</Text>
+      <View className="mt-3 flex-row items-stretch gap-2">
+        <View
+          className={`flex-1 rounded-xl border bg-zinc-950 px-3 py-2.5 ${
+            error ? 'border-red-500/50' : 'border-zinc-800'
+          }`}
+        >
+          <TextInput
+            className="text-base text-zinc-50 tabular-nums"
+            keyboardType="numeric"
+            value={text}
+            placeholderTextColor="#52525b"
+            onChangeText={(t) => { setText(t); setError(''); }}
+            onBlur={handleBlur}
+          />
+        </View>
+        <View className="items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 px-4">
+          <Text className="text-sm font-semibold text-zinc-400">{unit}</Text>
+        </View>
       </View>
-      {error ? <Text style={{ color: '#ef4444', fontSize: 12, marginTop: 4 }}>{error}</Text> : null}
+      {error ? <Text className="mt-1.5 text-xs text-red-400">{error}</Text> : null}
     </View>
   );
 }
@@ -62,64 +61,69 @@ export default function ThresholdSettingsScreen(): React.JSX.Element {
   }
 
   function handleReset(): void {
-    Alert.alert(
-      'Reset Thresholds',
-      'Restore all thresholds to their default values?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Reset', style: 'destructive', onPress: resetToDefaults },
-      ],
-    );
+    Alert.alert('Reset thresholds', 'Restore all thresholds to their default values?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Reset', style: 'destructive', onPress: resetToDefaults },
+    ]);
   }
 
   return (
     <ScrollView
-      contentContainerStyle={{ flexGrow: 1, padding: 20, backgroundColor: '#0f172a' }}
+      className="flex-1 bg-[#08080a]"
+      contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
     >
-      <Text style={{ color: '#f1f5f9', fontSize: 20, fontWeight: '700', marginBottom: 4 }}>
-        Alert Thresholds
-      </Text>
-      <Text style={{ color: '#64748b', fontSize: 13, marginBottom: 24 }}>
+      <Text className="text-[10px] font-bold tracking-[3px] text-zinc-500">CALIBRATION</Text>
+      <Text className="mt-1 text-2xl font-bold text-zinc-50">Alert thresholds</Text>
+      <Text className="mt-2 text-xs text-zinc-500">
         Alerts fire when a value crosses its threshold. Settings are saved per vehicle.
       </Text>
 
-      <ThresholdField
-        label="Max Coolant Temperature"
-        description="Alert when engine coolant exceeds this temperature."
-        value={thresholds.coolantTempMax}
-        unit="°C"
-        onCommit={(v) => update('coolantTempMax', v)}
-      />
+      <View className="mt-6">
+        <ThresholdField
+          label="Max coolant temperature"
+          description="Alert when engine coolant exceeds this temperature."
+          value={thresholds.coolantTempMax}
+          unit="°C"
+          onCommit={(v) => update('coolantTempMax', v)}
+        />
 
-      <ThresholdField
-        label="Min Battery Voltage"
-        description="Alert when control module voltage drops below this level."
-        value={thresholds.batteryVoltageMin}
-        unit="V"
-        onCommit={(v) => update('batteryVoltageMin', v)}
-      />
+        <ThresholdField
+          label="Min battery voltage"
+          description="Alert when control module voltage drops below this level."
+          value={thresholds.batteryVoltageMin}
+          unit="V"
+          onCommit={(v) => update('batteryVoltageMin', v)}
+        />
 
-      <ThresholdField
-        label="Min Fuel Level"
-        description="Alert when fuel tank level drops below this percentage."
-        value={thresholds.fuelLevelMin}
-        unit="%"
-        onCommit={(v) => update('fuelLevelMin', v)}
-      />
+        <ThresholdField
+          label="Min fuel level"
+          description="Alert when fuel tank level drops below this percentage."
+          value={thresholds.fuelLevelMin}
+          unit="%"
+          onCommit={(v) => update('fuelLevelMin', v)}
+        />
+      </View>
 
-      <View style={{ marginTop: 8, padding: 14, borderRadius: 12, backgroundColor: '#1e293b' }}>
-        <Text style={{ color: '#64748b', fontSize: 12 }}>
-          Defaults — Coolant: {DEFAULT_THRESHOLDS.coolantTempMax}°C &nbsp;|&nbsp;
-          Battery: {DEFAULT_THRESHOLDS.batteryVoltageMin} V &nbsp;|&nbsp;
-          Fuel: {DEFAULT_THRESHOLDS.fuelLevelMin}%
-        </Text>
+      <View className="mt-2 rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3">
+        <Text className="text-[10px] font-bold tracking-[2px] text-zinc-500">FACTORY DEFAULTS</Text>
+        <View className="mt-2 flex-row flex-wrap gap-x-4 gap-y-1">
+          <Text className="text-[11px] text-zinc-400">
+            Coolant <Text className="tabular-nums text-zinc-300">{DEFAULT_THRESHOLDS.coolantTempMax}°C</Text>
+          </Text>
+          <Text className="text-[11px] text-zinc-400">
+            Battery <Text className="tabular-nums text-zinc-300">{DEFAULT_THRESHOLDS.batteryVoltageMin} V</Text>
+          </Text>
+          <Text className="text-[11px] text-zinc-400">
+            Fuel <Text className="tabular-nums text-zinc-300">{DEFAULT_THRESHOLDS.fuelLevelMin}%</Text>
+          </Text>
+        </View>
       </View>
 
       <Pressable
         onPress={handleReset}
-        style={{ marginTop: 20, borderRadius: 12, borderWidth: 1, borderColor: '#ef4444', paddingVertical: 12, alignItems: 'center' }}
+        className="mt-6 items-center rounded-xl border border-red-500/40 bg-red-500/5 py-3 active:bg-red-500/10"
       >
-        <Text style={{ color: '#ef4444', fontWeight: '600' }}>Reset to Defaults</Text>
+        <Text className="text-sm font-bold tracking-wider text-red-400">RESET TO DEFAULTS</Text>
       </Pressable>
     </ScrollView>
   );

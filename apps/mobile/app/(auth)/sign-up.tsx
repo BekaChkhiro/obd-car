@@ -55,21 +55,24 @@ export default function SignUpScreen() {
 
   return (
     <KeyboardAvoidingView
-      className="flex-1 bg-gray-50"
+      className="flex-1 bg-[#08080a]"
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView
         contentContainerClassName="flex-grow justify-center px-6 py-12"
         keyboardShouldPersistTaps="handled"
       >
-        <Text className="mb-2 text-center text-3xl font-bold text-gray-900">Create account</Text>
-        <Text className="mb-8 text-center text-gray-500">
+        <Text className="text-center text-[10px] font-bold tracking-[3px] text-zinc-500">
+          OBD-II  ·  DIAGNOSTICS
+        </Text>
+        <Text className="mt-2 text-center text-3xl font-bold text-zinc-50">Create account</Text>
+        <Text className="mb-8 mt-2 text-center text-sm text-zinc-500">
           Start your OBD-II diagnostic journey
         </Text>
 
         {serverError ? (
-          <View className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
-            <Text className="text-sm text-red-700">{serverError}</Text>
+          <View className="mb-4 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3">
+            <Text className="text-sm text-red-300">{serverError}</Text>
           </View>
         ) : null}
 
@@ -109,19 +112,19 @@ export default function SignUpScreen() {
         <Pressable
           onPress={handleRegister}
           disabled={isLoading}
-          className="mb-8 items-center rounded-xl bg-blue-600 py-4 disabled:opacity-50"
+          className="mb-8 items-center rounded-xl bg-cyan-500 py-4 active:bg-cyan-600 disabled:opacity-50"
         >
           {isLoading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color="#08080a" />
           ) : (
-            <Text className="text-base font-semibold text-white">Create account</Text>
+            <Text className="text-base font-bold tracking-wider text-zinc-950">CREATE ACCOUNT</Text>
           )}
         </Pressable>
 
         <View className="flex-row justify-center">
-          <Text className="text-sm text-gray-500">Already have an account? </Text>
+          <Text className="text-sm text-zinc-500">Already have an account? </Text>
           <Link href="/(auth)/sign-in">
-            <Text className="text-sm font-semibold text-blue-600">Sign in</Text>
+            <Text className="text-sm font-semibold text-cyan-400">Sign in</Text>
           </Link>
         </View>
       </ScrollView>

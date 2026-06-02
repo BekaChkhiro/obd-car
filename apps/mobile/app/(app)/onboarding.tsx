@@ -46,8 +46,6 @@ async function requestAndroidBlePermissions(): Promise<boolean> {
 
 function rssiLabel(rssi: number | null): string {
   if (rssi === null) return '—';
-  if (rssi >= -60) return `${rssi} dBm`;
-  if (rssi >= -75) return `${rssi} dBm`;
   return `${rssi} dBm`;
 }
 
@@ -66,32 +64,32 @@ function WelcomeStep({ onNext }: WelcomeStepProps) {
     >
       <View className="flex-1 justify-center px-8">
         <View className="items-center mb-10">
-          <View className="w-20 h-20 rounded-2xl bg-blue-600 items-center justify-center mb-6">
-            <Text className="text-4xl">🚗</Text>
+          <View className="mb-6 h-20 w-20 items-center justify-center rounded-3xl border border-cyan-500/30 bg-cyan-500/10">
+            <Text className="text-[10px] font-bold tracking-[2px] text-cyan-400">OBD</Text>
           </View>
-          <Text className="text-3xl font-bold text-gray-900 text-center">
+          <Text className="text-center text-3xl font-bold text-zinc-50">
             {t('onboarding.welcome.title')}
           </Text>
-          <Text className="mt-3 text-base text-gray-500 text-center leading-6">
+          <Text className="mt-3 text-center text-base leading-6 text-zinc-500">
             {t('onboarding.welcome.subtitle')}
           </Text>
         </View>
 
-        <View className="rounded-2xl border border-blue-100 bg-blue-50 px-5 py-4 mb-8">
-          <Text className="text-sm font-semibold text-blue-800 mb-1">
-            {t('onboarding.welcome.bleHeading')}
+        <View className="mb-8 rounded-2xl border border-cyan-500/30 bg-cyan-500/10 px-5 py-4">
+          <Text className="mb-1 text-[10px] font-bold tracking-[2px] text-cyan-300">
+            {t('onboarding.welcome.bleHeading').toUpperCase()}
           </Text>
-          <Text className="text-sm text-blue-700 leading-5">
+          <Text className="text-sm leading-5 text-cyan-200/80">
             {t('onboarding.welcome.bleBody')}
           </Text>
         </View>
 
         <Pressable
           onPress={onNext}
-          className="rounded-2xl bg-blue-600 py-4 items-center"
+          className="items-center rounded-2xl bg-cyan-500 py-4 active:bg-cyan-600"
         >
-          <Text className="text-base font-semibold text-white">
-            {t('onboarding.welcome.next')}
+          <Text className="text-base font-bold tracking-wider text-zinc-950">
+            {t('onboarding.welcome.next').toUpperCase()}
           </Text>
         </Pressable>
       </View>
@@ -163,23 +161,23 @@ function PairStep({ onNext, onSkip }: PairStepProps) {
   if (isReady && connectedDeviceId) {
     return (
       <View className="flex-1 justify-center px-8">
-        <View className="items-center mb-10">
-          <View className="w-16 h-16 rounded-2xl bg-green-100 items-center justify-center mb-4">
-            <Text className="text-3xl">✓</Text>
+        <View className="mb-10 items-center">
+          <View className="mb-4 h-16 w-16 items-center justify-center rounded-full border border-emerald-500/40 bg-emerald-500/10">
+            <View className="h-2 w-2 rounded-full bg-emerald-400" />
           </View>
-          <Text className="text-xl font-bold text-gray-900 text-center">
+          <Text className="text-center text-xl font-bold text-zinc-50">
             {t('onboarding.pair.connected')}
           </Text>
-          <Text className="mt-2 text-sm text-gray-400 text-center" numberOfLines={1}>
+          <Text className="mt-2 text-center text-sm text-zinc-500" numberOfLines={1}>
             {connectedDeviceId}
           </Text>
         </View>
         <Pressable
           onPress={onNext}
-          className="rounded-2xl bg-blue-600 py-4 items-center mb-3"
+          className="mb-3 items-center rounded-2xl bg-cyan-500 py-4 active:bg-cyan-600"
         >
-          <Text className="text-base font-semibold text-white">
-            {t('onboarding.pair.next')}
+          <Text className="text-base font-bold tracking-wider text-zinc-950">
+            {t('onboarding.pair.next').toUpperCase()}
           </Text>
         </Pressable>
       </View>
@@ -189,37 +187,37 @@ function PairStep({ onNext, onSkip }: PairStepProps) {
   return (
     <View className="flex-1">
       <View className="px-6 pt-2 pb-4">
-        <Text className="text-2xl font-bold text-gray-900">
+        <Text className="text-2xl font-bold text-zinc-50">
           {t('onboarding.pair.title')}
         </Text>
-        <Text className="mt-1 text-sm text-gray-500">
+        <Text className="mt-1 text-sm text-zinc-500">
           {t('onboarding.pair.subtitle')}
         </Text>
       </View>
 
-      <View className="mx-6 mb-4 flex-row items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3">
+      <View className="mx-6 mb-4 flex-row items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 py-3">
         <View>
           {isScanning ? (
             <View className="flex-row items-center gap-2">
-              <ActivityIndicator size="small" color="#2563eb" />
-              <Text className="ml-2 text-sm text-blue-600">
+              <ActivityIndicator size="small" color="#22d3ee" />
+              <Text className="ml-2 text-sm text-cyan-300">
                 {t('pair.scanning')}
               </Text>
             </View>
           ) : isConnecting ? (
             <View className="flex-row items-center gap-2">
-              <ActivityIndicator size="small" color="#ca8a04" />
-              <Text className="ml-2 text-sm text-yellow-600">Connecting…</Text>
+              <ActivityIndicator size="small" color="#fbbf24" />
+              <Text className="ml-2 text-sm text-amber-300">Connecting…</Text>
             </View>
           ) : (
-            <Text className="text-sm text-gray-600">
+            <Text className="text-sm text-zinc-400">
               {devices.length === 0
                 ? 'No devices found'
                 : `${devices.length} device(s) found`}
             </Text>
           )}
           {!permissionGranted && Platform.OS === 'android' && (
-            <Text className="mt-0.5 text-xs text-red-500">
+            <Text className="mt-0.5 text-xs text-red-400">
               Bluetooth permission denied
             </Text>
           )}
@@ -227,12 +225,16 @@ function PairStep({ onNext, onSkip }: PairStepProps) {
         <Pressable
           onPress={isScanning ? stopScan : startScan}
           disabled={isConnecting}
-          className={`rounded-lg px-4 py-2 ${isScanning ? 'bg-gray-200' : isConnecting ? 'bg-gray-100' : 'bg-blue-600'}`}
+          className={`rounded-lg px-3 py-2 ${
+            isScanning ? 'bg-zinc-800' : isConnecting ? 'bg-zinc-900' : 'bg-cyan-500'
+          }`}
         >
           <Text
-            className={`text-sm font-medium ${isScanning ? 'text-gray-700' : isConnecting ? 'text-gray-400' : 'text-white'}`}
+            className={`text-[11px] font-bold tracking-wider ${
+              isScanning ? 'text-zinc-300' : isConnecting ? 'text-zinc-600' : 'text-zinc-950'
+            }`}
           >
-            {isScanning ? 'Stop' : 'Scan'}
+            {isScanning ? 'STOP' : 'SCAN'}
           </Text>
         </Pressable>
       </View>
@@ -241,47 +243,52 @@ function PairStep({ onNext, onSkip }: PairStepProps) {
         data={devices}
         keyExtractor={(item) => item.id}
         renderItem={({ item }: { item: ScannedDevice }) => (
-          <View className="mx-6 mb-3 rounded-xl border border-gray-200 bg-white px-4 py-3">
+          <Pressable
+            onPress={() =>
+              !isConnecting && connectedDeviceId !== item.id && handleConnect(item.id)
+            }
+            className="mx-6 mb-2 rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 active:bg-zinc-900"
+          >
             <View className="flex-row items-center justify-between">
               <View className="flex-1 mr-3">
-                <Text
-                  className="text-sm font-semibold text-gray-900"
-                  numberOfLines={1}
-                >
-                  {item.name ?? 'Unknown Device'}
+                <Text className="text-sm font-semibold text-zinc-50" numberOfLines={1}>
+                  {item.name ?? 'Unknown device'}
                 </Text>
-                <Text className="mt-0.5 text-xs text-gray-400" numberOfLines={1}>
+                <Text className="mt-0.5 text-[11px] text-zinc-500" numberOfLines={1}>
                   {item.id}
                 </Text>
-                <Text className="mt-0.5 text-xs text-blue-500">
+                <Text className="mt-1 text-[11px] text-cyan-400">
                   {rssiLabel(item.rssi)}
                 </Text>
               </View>
-              <Pressable
-                onPress={() =>
-                  !isConnecting && connectedDeviceId !== item.id && handleConnect(item.id)
-                }
-                className={`rounded-lg px-3 py-2 ${connectedDeviceId === item.id ? 'bg-green-100' : isConnecting ? 'bg-yellow-100' : 'bg-blue-600'}`}
+              <View
+                className={`rounded-lg px-3 py-2 ${
+                  connectedDeviceId === item.id
+                    ? 'border border-emerald-500/30 bg-emerald-500/10'
+                    : isConnecting
+                      ? 'border border-amber-500/30 bg-amber-500/10'
+                      : 'bg-cyan-500'
+                }`}
               >
                 {isConnecting && connectedDeviceId !== item.id ? (
-                  <ActivityIndicator size="small" color="#ca8a04" />
+                  <ActivityIndicator size="small" color="#fbbf24" />
                 ) : (
                   <Text
-                    className={`text-xs font-medium ${connectedDeviceId === item.id ? 'text-green-700' : 'text-white'}`}
+                    className={`text-[11px] font-bold tracking-wider ${
+                      connectedDeviceId === item.id ? 'text-emerald-300' : 'text-zinc-950'
+                    }`}
                   >
-                    {connectedDeviceId === item.id
-                      ? 'Connected'
-                      : t('pair.connect')}
+                    {connectedDeviceId === item.id ? 'CONNECTED' : t('pair.connect').toUpperCase()}
                   </Text>
                 )}
-              </Pressable>
+              </View>
             </View>
-          </View>
+          </Pressable>
         )}
         ListEmptyComponent={
           !isScanning && !isConnecting ? (
             <View className="mt-6 items-center px-8">
-              <Text className="text-center text-sm text-gray-400">
+              <Text className="text-center text-sm text-zinc-500">
                 No Bluetooth devices discovered. Tap Scan to search.
               </Text>
             </View>
@@ -290,12 +297,12 @@ function PairStep({ onNext, onSkip }: PairStepProps) {
         contentContainerStyle={{ paddingBottom: 100 }}
       />
 
-      <View className="absolute bottom-0 left-0 right-0 px-6 pb-6 bg-gray-50">
+      <View className="absolute bottom-0 left-0 right-0 bg-[#08080a] px-6 pb-6 pt-3">
         <Pressable
           onPress={onSkip}
-          className="rounded-2xl border border-gray-300 py-3 items-center"
+          className="items-center rounded-2xl border border-zinc-800 py-3 active:bg-zinc-900"
         >
-          <Text className="text-sm font-medium text-gray-600">
+          <Text className="text-sm font-semibold text-zinc-400">
             {t('onboarding.pair.skip')}
           </Text>
         </Pressable>
@@ -349,10 +356,10 @@ function VinStep({ onNext, onSkip }: VinStepProps) {
         keyboardShouldPersistTaps="handled"
       >
         <View className="flex-1 px-6 pt-2">
-          <Text className="text-2xl font-bold text-gray-900">
+          <Text className="text-2xl font-bold text-zinc-50">
             {t('onboarding.vin.title')}
           </Text>
-          <Text className="mt-1 text-sm text-gray-500 mb-6">
+          <Text className="mb-6 mt-1 text-sm text-zinc-500">
             {t('onboarding.vin.subtitle')}
           </Text>
 
@@ -361,33 +368,33 @@ function VinStep({ onNext, onSkip }: VinStepProps) {
               <Pressable
                 onPress={handleReadVin}
                 disabled={vinStatus === 'reading' || vinStatus === 'success'}
-                className={`rounded-xl py-3 px-4 items-center flex-row justify-center gap-2 ${
+                className={`flex-row items-center justify-center gap-2 rounded-xl px-4 py-3 ${
                   vinStatus === 'success'
-                    ? 'bg-green-100'
+                    ? 'border border-emerald-500/30 bg-emerald-500/10'
                     : vinStatus === 'reading'
-                      ? 'bg-gray-100'
-                      : 'bg-blue-600'
+                      ? 'bg-zinc-900'
+                      : 'bg-cyan-500'
                 }`}
               >
                 {vinStatus === 'reading' ? (
                   <>
-                    <ActivityIndicator size="small" color="#6b7280" />
-                    <Text className="ml-2 text-sm font-medium text-gray-600">
+                    <ActivityIndicator size="small" color="#a1a1aa" />
+                    <Text className="ml-2 text-sm font-semibold text-zinc-400">
                       {t('onboarding.vin.autoReading')}
                     </Text>
                   </>
                 ) : vinStatus === 'success' ? (
-                  <Text className="text-sm font-medium text-green-700">
+                  <Text className="text-sm font-semibold text-emerald-300">
                     {t('onboarding.vin.autoSuccess')}
                   </Text>
                 ) : (
-                  <Text className="text-sm font-medium text-white">
-                    {t('onboarding.vin.readVin')}
+                  <Text className="text-sm font-bold tracking-wider text-zinc-950">
+                    {t('onboarding.vin.readVin').toUpperCase()}
                   </Text>
                 )}
               </Pressable>
               {vinStatus === 'failed' && (
-                <Text className="mt-2 text-xs text-red-500 text-center">
+                <Text className="mt-2 text-center text-xs text-red-400">
                   {t('onboarding.vin.autoFailed')}
                 </Text>
               )}
@@ -399,7 +406,7 @@ function VinStep({ onNext, onSkip }: VinStepProps) {
             : true) && (
             <View className="mb-2">
               {isConnected && (
-                <Text className="text-xs text-gray-400 mb-2 text-center">
+                <Text className="mb-2 text-center text-xs text-zinc-500">
                   {t('onboarding.vin.orEnterManually')}
                 </Text>
               )}
@@ -407,39 +414,37 @@ function VinStep({ onNext, onSkip }: VinStepProps) {
                 value={vin}
                 onChangeText={setVin}
                 placeholder={t('onboarding.vin.placeholder')}
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor="#52525b"
                 autoCapitalize="characters"
                 maxLength={17}
-                className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900"
+                className="rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm font-mono text-zinc-50"
               />
             </View>
           )}
 
           {vinStatus === 'success' && (
-            <View className="rounded-xl border border-gray-200 bg-white px-4 py-3 mb-2">
-              <Text className="text-xs text-gray-400 mb-0.5">VIN</Text>
-              <Text className="text-sm font-mono font-semibold text-gray-900">
-                {vin}
-              </Text>
+            <View className="mb-2 rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3">
+              <Text className="mb-1 text-[10px] font-bold tracking-[2px] text-zinc-500">VIN</Text>
+              <Text className="font-mono text-sm font-semibold text-zinc-50">{vin}</Text>
             </View>
           )}
         </View>
       </ScrollView>
 
-      <View className="px-6 pb-6 gap-3">
+      <View className="gap-3 px-6 pb-6">
         <Pressable
           onPress={handleContinue}
-          className="rounded-2xl bg-blue-600 py-4 items-center"
+          className="items-center rounded-2xl bg-cyan-500 py-4 active:bg-cyan-600"
         >
-          <Text className="text-base font-semibold text-white">
-            {t('onboarding.vin.next')}
+          <Text className="text-base font-bold tracking-wider text-zinc-950">
+            {t('onboarding.vin.next').toUpperCase()}
           </Text>
         </Pressable>
         <Pressable
           onPress={onSkip}
-          className="rounded-2xl border border-gray-300 py-3 items-center"
+          className="items-center rounded-2xl border border-zinc-800 py-3 active:bg-zinc-900"
         >
-          <Text className="text-sm font-medium text-gray-600">
+          <Text className="text-sm font-semibold text-zinc-400">
             {t('onboarding.vin.skip')}
           </Text>
         </Pressable>
@@ -460,31 +465,37 @@ function LanguageStep({ onFinish }: LanguageStepProps) {
 
   return (
     <View className="flex-1 justify-center px-8">
-      <View className="items-center mb-10">
-        <Text className="text-3xl font-bold text-gray-900 text-center">
+      <View className="mb-10 items-center">
+        <Text className="text-center text-3xl font-bold text-zinc-50">
           {t('onboarding.language.title')}
         </Text>
-        <Text className="mt-3 text-base text-gray-500 text-center leading-6">
+        <Text className="mt-3 text-center text-base leading-6 text-zinc-500">
           {t('onboarding.language.subtitle')}
         </Text>
       </View>
 
-      <View className="flex-row rounded-2xl border border-gray-200 overflow-hidden mb-10">
+      <View className="mb-10 flex-row gap-2 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-1">
         {(['en', 'ka'] as Locale[]).map((lng) => (
           <Pressable
             key={lng}
             onPress={() => setLocale(lng)}
-            className={`flex-1 py-5 items-center ${locale === lng ? 'bg-blue-600' : 'bg-white'}`}
+            className={`flex-1 items-center rounded-xl py-5 ${
+              locale === lng ? 'bg-zinc-100' : 'bg-transparent'
+            }`}
           >
             <Text
-              className={`text-xl font-bold mb-1 ${locale === lng ? 'text-white' : 'text-gray-700'}`}
+              className={`text-sm font-bold tracking-wider ${
+                locale === lng ? 'text-zinc-950' : 'text-zinc-400'
+              }`}
             >
-              {lng === 'en' ? '🇬🇧' : '🇬🇪'}
+              {lng === 'en' ? 'ENGLISH' : 'ქართული'}
             </Text>
             <Text
-              className={`text-sm font-semibold ${locale === lng ? 'text-white' : 'text-gray-700'}`}
+              className={`mt-1 text-[10px] tracking-widest ${
+                locale === lng ? 'text-zinc-600' : 'text-zinc-600'
+              }`}
             >
-              {lng === 'en' ? 'English' : 'ქართული'}
+              {lng === 'en' ? 'EN' : 'KA'}
             </Text>
           </Pressable>
         ))}
@@ -492,10 +503,10 @@ function LanguageStep({ onFinish }: LanguageStepProps) {
 
       <Pressable
         onPress={onFinish}
-        className="rounded-2xl bg-blue-600 py-4 items-center"
+        className="items-center rounded-2xl bg-cyan-500 py-4 active:bg-cyan-600"
       >
-        <Text className="text-base font-semibold text-white">
-          {t('onboarding.language.finish')}
+        <Text className="text-base font-bold tracking-wider text-zinc-950">
+          {t('onboarding.language.finish').toUpperCase()}
         </Text>
       </Pressable>
     </View>
@@ -520,21 +531,21 @@ export default function OnboardingScreen() {
   }
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View className="flex-1 bg-[#08080a]">
       {step > 0 && (
-        <View className="flex-row items-center px-6 pt-4 pb-2 gap-3">
+        <View className="flex-row items-center gap-3 px-6 pb-2 pt-5">
           <Pressable onPress={() => setStep((s) => s - 1)}>
-            <Text className="text-sm text-blue-600">← Back</Text>
+            <Text className="text-sm font-semibold text-cyan-400">← Back</Text>
           </Pressable>
           <View className="flex-1 flex-row gap-1">
             {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
               <View
                 key={i}
-                className={`flex-1 h-1 rounded-full ${i <= step ? 'bg-blue-600' : 'bg-gray-200'}`}
+                className={`h-1 flex-1 rounded-full ${i <= step ? 'bg-cyan-400' : 'bg-zinc-800'}`}
               />
             ))}
           </View>
-          <Text className="text-xs text-gray-400">
+          <Text className="text-[10px] font-semibold tracking-widest text-zinc-500">
             {t('onboarding.step', { current: step + 1, total: TOTAL_STEPS })}
           </Text>
         </View>

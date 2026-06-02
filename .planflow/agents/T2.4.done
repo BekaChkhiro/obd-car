@@ -1,0 +1,1 @@
+{"taskId":"T2.4","status":"done","phase":"complete","prUrl":"https://github.com/BekaChkhiro/obd-car/pull/21","summary":"MMKV persistence added to dashboard store — hydrates on startup, persists on every set, reset skips to preserve last session. PR #21 merged.","branch":"task/T2.4-persist-dashboard-snapshot","lastUpdate":"2026-05-19T01:12:00Z","finishedAt":"2026-05-19T01:12:00Z"}

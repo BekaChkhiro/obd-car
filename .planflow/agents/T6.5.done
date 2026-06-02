@@ -1,0 +1,1 @@
+{"taskId":"T6.5","status":"done","phase":"complete","prUrl":"https://github.com/BekaChkhiro/obd-car/pull/49","summary":"EAS build profiles: fleshed out eas.json, submit profiles, package.json scripts, eas-build.yml CI workflow. PR #49 merged into main.","branch":"task/T6.5-eas-build-profiles","lastUpdate":"2026-05-19T12:25:40Z","finishedAt":"2026-05-19T12:25:40Z"}
