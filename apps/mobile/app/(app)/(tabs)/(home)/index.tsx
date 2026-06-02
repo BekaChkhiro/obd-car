@@ -24,10 +24,15 @@ function StatusDot({ active }: { active: boolean }) {
 }
 
 function VehicleArt({ active }: { active: boolean }) {
-  // True side-view car silhouette (MaterialCommunityIcons' "car-side").
-  // Only the fill color changes — no glow, halo, or shadow.
+  // Sporty side-view car silhouette (Ionicons "car-sport").
+  // Only the fill color changes — no glow, halo, or shadow. Purely decorative,
+  // so it's hidden from screen readers (status is announced by the card above).
   return (
-    <View className="my-5 items-center">
+    <View
+      className="my-5 items-center"
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
       <Ionicons
         name="car-sport"
         size={96}
@@ -60,6 +65,8 @@ function ShortcutTile({ icon, label, hint, onPress, accent = 'cyan' }: ShortcutT
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${label}. ${hint}`}
       className="flex-1 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4 active:bg-zinc-900"
     >
       <View

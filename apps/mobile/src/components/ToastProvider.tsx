@@ -6,6 +6,7 @@ import React, {
   useState,
 } from 'react';
 import { Animated, StyleSheet, Text } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export type ToastType = 'info' | 'warning' | 'error';
 
@@ -26,6 +27,7 @@ export function useToast(): ShowToast {
 const DISMISS_AFTER_MS = 4_000;
 
 export function ToastProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
+  const insets = useSafeAreaInsets();
   const [toast, setToast] = useState<Toast | null>(null);
   const opacity = useRef(new Animated.Value(0)).current;
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -62,8 +64,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }): Reac
       {children}
       {toast ? (
         <Animated.View
-          style={[styles.container, bgStyle(toast.type), { opacity }]}
+          style={[styles.container, bgStyle(toast.type), { opacity, top: insets.top + 12 }]}
           pointerEvents="none"
+          accessibilityLiveRegion="polite"
+          accessibilityRole="alert"
         >
           <Text style={styles.text}>{toast.message}</Text>
         </Animated.View>
@@ -86,7 +90,6 @@ function bgStyle(type: ToastType): { backgroundColor: string; borderColor: strin
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    top: 56,
     left: 16,
     right: 16,
     borderRadius: 12,

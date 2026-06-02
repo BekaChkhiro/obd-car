@@ -163,11 +163,9 @@ export function SwipeButton({
     ],
   }));
 
-  // Chevrons share the same fade as the label so they vanish on drag.
+  // Static multiplier kept so HintChevron can fade with the container; the
+  // container-level opacity (hintContainerStyle) already drives the drag fade.
   const hintFade = useSharedValue(1);
-  useEffect(() => {
-    // Re-derive whenever offset changes — keep chevrons in sync via animated value.
-  }, []);
 
   const hintContainerStyle = useAnimatedStyle(() => ({
     opacity: interpolate(

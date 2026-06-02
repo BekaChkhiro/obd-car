@@ -274,6 +274,8 @@ function ChatHeader({ connection, hasMessages, onClear, onOpenHistory }: ChatHea
         <View className="flex-row items-center gap-1">
           <Pressable
             onPress={onOpenHistory}
+            accessibilityRole="button"
+            accessibilityLabel={t('chat.openHistory')}
             className="h-9 w-9 items-center justify-center rounded-full active:bg-zinc-900"
             hitSlop={8}
           >
@@ -282,6 +284,9 @@ function ChatHeader({ connection, hasMessages, onClear, onOpenHistory }: ChatHea
           <Pressable
             onPress={hasMessages ? onClear : undefined}
             disabled={!hasMessages}
+            accessibilityRole="button"
+            accessibilityLabel={t('chat.clearConversation')}
+            accessibilityState={{ disabled: !hasMessages }}
             className={`h-9 w-9 items-center justify-center rounded-full ${
               hasMessages ? 'active:bg-zinc-900' : 'opacity-30'
             }`}
@@ -352,6 +357,8 @@ function InputBar({ onSend, onAbort, disabled }: InputBarProps) {
         {isStreaming ? (
           <Pressable
             onPress={onAbort}
+            accessibilityRole="button"
+            accessibilityLabel={t('chat.stopGenerating')}
             className="h-9 w-9 items-center justify-center rounded-full bg-red-500 active:bg-red-600"
             hitSlop={6}
           >
@@ -361,16 +368,15 @@ function InputBar({ onSend, onAbort, disabled }: InputBarProps) {
           <Pressable
             onPress={handleSend}
             disabled={!canSend}
+            accessibilityRole="button"
+            accessibilityLabel={t('chat.send')}
+            accessibilityState={{ disabled: !canSend }}
             className={`h-9 w-9 items-center justify-center rounded-full ${
               canSend ? 'bg-cyan-500 active:bg-cyan-600' : 'bg-zinc-800'
             }`}
             hitSlop={6}
           >
-            <Text
-              className={`text-lg font-bold ${canSend ? 'text-zinc-950' : 'text-zinc-600'}`}
-            >
-              ↑
-            </Text>
+            <Feather name="arrow-up" size={18} color={canSend ? colors.bg : colors.textMuted} />
           </Pressable>
         )}
       </View>
@@ -415,6 +421,7 @@ function buildGroupedItems(messages: ChatMessage[]): RenderItem[] {
 export default function ChatScreen() {
   useToolExecutor();
   const router = useRouter();
+  const { t } = useTranslation();
 
   const messages = useChatStore((s) => s.messages);
   const isStreaming = useChatStore((s) => s.isStreaming);
@@ -575,9 +582,11 @@ export default function ChatScreen() {
             {showScrollToBottom && (
               <Pressable
                 onPress={() => listRef.current?.scrollToEnd({ animated: true })}
+                accessibilityRole="button"
+                accessibilityLabel={t('chat.scrollToLatest')}
                 className="absolute bottom-4 right-4 h-10 w-10 items-center justify-center rounded-full border border-zinc-800 bg-zinc-900"
               >
-                <Text className="text-base text-zinc-300">↓</Text>
+                <Feather name="chevron-down" size={18} color={colors.textSecondary} />
               </Pressable>
             )}
           </View>
