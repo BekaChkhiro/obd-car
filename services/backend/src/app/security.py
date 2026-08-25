@@ -1,4 +1,4 @@
-"""Password hashing, JWT issuance/verification, Google ID-token verification."""
+"""JWT issuance/verification and phone-verification-code hashing."""
 
 from __future__ import annotations
 
@@ -7,30 +7,12 @@ import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-import bcrypt
 import jwt
-from google.auth.transport import requests as google_requests
-from google.oauth2 import id_token
 
 from .config import settings
 
 ACCESS_TOKEN_TYPE = "access"
 REFRESH_TOKEN_TYPE = "refresh"
-
-
-# ---------- Password hashing ----------
-
-
-def hash_password(password: str) -> str:
-    salt = bcrypt.gensalt()
-    return bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
-
-
-def verify_password(password: str, password_hash: str) -> bool:
-    try:
-        return bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8"))
-    except ValueError:
-        return False
 
 
 # ---------- JWT ----------
@@ -93,31 +75,30 @@ def decode_access_token(token: str) -> dict[str, Any]:
     return payload
 
 
-# ---------- Google ID token ----------
+# ---------- Phone verification codes ----------
+
+# Four digits is short enough to read off an SMS and retype, which is the
+# whole point of a code rather than a link. It is only safe because the code
+# is single-use, short-lived and dies after a few wrong guesses — see
+# PhoneVerificationCode.
+_VERIFICATION_CODE_DIGITS = 4
 
 
-class GoogleAuthError(Exception):
-    pass
+def generate_verification_code() -> str:
+    """A cryptographically random numeric code.
 
-
-def verify_google_id_token(token: str) -> dict[str, Any]:
-    """Verify a Google ID token and return its claims.
-
-    Raises GoogleAuthError on any verification failure.
+    `secrets`, not `random`: the latter is seeded predictably and would make
+    codes guessable from one another.
     """
-    if not settings.google_client_id:
-        raise GoogleAuthError("GOOGLE_CLIENT_ID is not configured")
-    try:
-        claims = id_token.verify_oauth2_token(
-            token, google_requests.Request(), settings.google_client_id
-        )
-    except ValueError as exc:
-        raise GoogleAuthError(str(exc)) from exc
+    upper = 10**_VERIFICATION_CODE_DIGITS
+    return str(secrets.randbelow(upper)).zfill(_VERIFICATION_CODE_DIGITS)
 
-    if not claims.get("email_verified", False):
-        raise GoogleAuthError("email not verified by Google")
-    if not claims.get("sub"):
-        raise GoogleAuthError("missing subject in Google token")
-    if not claims.get("email"):
-        raise GoogleAuthError("missing email in Google token")
-    return claims
+
+def hash_verification_code(code: str) -> str:
+    """Hash a verification code for storage, exactly as refresh tokens are handled.
+
+    SHA-256, not bcrypt: the code is a random secret we generated (like a
+    refresh token), not a human-chosen password — there is nothing for a slow
+    hash to protect against that the attempt limit does not already cover.
+    """
+    return hashlib.sha256(code.encode("utf-8")).hexdigest()

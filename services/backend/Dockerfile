@@ -42,6 +42,11 @@ WORKDIR /app
 
 COPY --from=builder --chown=app:app /app/.venv /app/.venv
 COPY --chown=app:app src /app/src
+# Migrations run at boot, so the scripts have to be in the image. Without
+# them the schema converges only as far as create_all can take it — new
+# tables appear, but a column added to an existing one never does.
+COPY --chown=app:app migrations /app/migrations
+COPY --chown=app:app alembic.ini /app/alembic.ini
 
 USER app
 

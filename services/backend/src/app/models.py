@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, Text
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
@@ -14,11 +14,9 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    email: Mapped[str] = mapped_column(String(320), unique=True, index=True, nullable=False)
-    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    google_sub: Mapped[str | None] = mapped_column(
-        String(255), unique=True, index=True, nullable=True
-    )
+    phone: Mapped[str] = mapped_column(String(20), unique=True, index=True, nullable=False)
+    first_name: Mapped[str] = mapped_column(String(80), nullable=False)
+    last_name: Mapped[str] = mapped_column(String(80), nullable=False)
     locale: Mapped[str] = mapped_column(String(16), default="en", nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, nullable=False
@@ -51,6 +49,36 @@ class RefreshToken(Base):
     )
 
     user: Mapped[User] = relationship(back_populates="refresh_tokens")
+
+
+class PhoneVerificationCode(Base):
+    """A one-time SMS code, for both login and registration.
+
+    Stored as a hash for the same reason refresh tokens are: a database dump
+    must not hand over a working credential. `attempts` is what keeps a
+    four-digit code safe — ten thousand combinations is not many, so the code
+    dies after a handful of wrong guesses rather than waiting out its expiry.
+
+    `phone` is not a `User` foreign key: a registration code is requested and
+    verified before any `User` row exists, so the row has to stand on its own.
+    `first_name`/`last_name` are held here between request and verify so that
+    "register" and "log in" can be the same two calls — the server does not
+    know which one it is until the code comes back.
+    """
+
+    __tablename__ = "phone_verification_codes"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    phone: Mapped[str] = mapped_column(String(20), index=True, nullable=False)
+    code_hash: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    first_name: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    last_name: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
 
 
 class DiagnosticSession(Base):

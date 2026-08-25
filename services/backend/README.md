@@ -8,7 +8,7 @@ the mobile client. Persists sessions, messages, and auth in SQLite.
 ```bash
 # from services/backend
 uv sync
-cp .env.example .env   # fill in JWT_SECRET, ANTHROPIC_API_KEY, GOOGLE_CLIENT_ID
+cp .env.example .env   # fill in JWT_SECRET, ANTHROPIC_API_KEY, SENDER_GE_API_KEY
 uv run uvicorn app.main:app --reload
 ```
 
@@ -38,7 +38,7 @@ docker build -t obd-backend services/backend
 docker run --rm -p 8000:8000 \
   -e JWT_SECRET="$(openssl rand -hex 32)" \
   -e ANTHROPIC_API_KEY="sk-ant-..." \
-  -e GOOGLE_CLIENT_ID="..." \
+  -e SENDER_GE_API_KEY="..." \
   -v "$(pwd)/.docker-data:/data" \
   obd-backend
 ```
@@ -70,8 +70,16 @@ as environment variables at runtime. **Never commit any of these.**
 fly secrets set \
   JWT_SECRET="$(openssl rand -hex 32)" \
   ANTHROPIC_API_KEY="sk-ant-..." \
-  GOOGLE_CLIENT_ID="...apps.googleusercontent.com" \
+  SENDER_GE_API_KEY="..." \
   CORS_ORIGINS="https://app.example.com"
+```
+
+For the App Store review build only, also set a reserved test number so a
+reviewer with a non-Georgian phone can sign in — see `TEST_PHONE_NUMBERS`
+below:
+
+```bash
+fly secrets set TEST_PHONE_NUMBERS="+995555000001:8264"
 ```
 
 Deploy manually:
@@ -130,7 +138,7 @@ Two workflows live in `.github/workflows/`:
 | `FLY_API_TOKEN` | `fly tokens create deploy -x 999999h` (scope: this app) — set under repo settings → Secrets and variables → Actions |
 
 App secrets themselves (`JWT_SECRET`, `ANTHROPIC_API_KEY`,
-`GOOGLE_CLIENT_ID`, etc.) live in **Fly secrets**, not GitHub. GitHub
+`SENDER_GE_API_KEY`, etc.) live in **Fly secrets**, not GitHub. GitHub
 Actions only needs `FLY_API_TOKEN` — `flyctl deploy` picks the rest up
 from Fly at runtime. This keeps prod credentials out of the CI
 environment entirely.
@@ -139,11 +147,24 @@ environment entirely.
 
 See `.env.example` for the full list. Production-critical:
 
-| Name                | Notes                                                                |
-| ------------------- | -------------------------------------------------------------------- |
-| `JWT_SECRET`        | Required. ≥32 bytes of entropy. Rotating invalidates all sessions.   |
-| `ANTHROPIC_API_KEY` | Required. Server-side key — never ship to the mobile client.         |
-| `GOOGLE_CLIENT_ID`  | Required for Google Sign-In. Server-side client ID, not the mobile one. |
-| `DB_PATH`           | In container: `/data/obd.db` (on the mounted volume).                |
-| `CORS_ORIGINS`      | Comma-separated. Set to your real mobile/web origins in prod.        |
-| `APP_ENV`           | `production` on Fly; flips structlog to JSON output (see `logging.py`). |
+| Name                    | Notes                                                                |
+| ----------------------- | -------------------------------------------------------------------- |
+| `JWT_SECRET`            | Required. ≥32 bytes of entropy. Rotating invalidates all sessions.   |
+| `ANTHROPIC_API_KEY`     | Required. Server-side key — never ship to the mobile client.         |
+| `SENDER_GE_API_KEY`     | Required to actually send SMS codes. Blank logs the code instead — fine for dev, never for prod. |
+| `TEST_PHONE_NUMBERS`    | Reserved numbers with a fixed code, for App Store review only — see below. Leave blank otherwise. |
+| `DB_PATH`               | In container: `/data/obd.db` (on the mounted volume).                |
+| `CORS_ORIGINS`          | Comma-separated. Set to your real mobile/web origins in prod.        |
+| `APP_ENV`               | `production` on Fly; flips structlog to JSON output (see `logging.py`). |
+
+### `TEST_PHONE_NUMBERS` — App Store review
+
+Apple's reviewers have US numbers; `sender.ge` only delivers to Georgian
+ones, and phone auth is the only way into the app. Without a reserved
+number, review is an automatic Guideline 2.1 rejection.
+
+Format: `phone:code,phone:code` (e.g. `+995555000001:8264`). A number in
+this map skips `sender.ge` and the resend cooldown, but the code still
+expires and is still limited to five guesses — it behaves like a normal
+code except for delivery. Put the number and code in the App Review notes
+alongside the account's name.

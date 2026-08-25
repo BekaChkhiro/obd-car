@@ -6,7 +6,8 @@
 #   fly secrets set \
 #     ANTHROPIC_API_KEY=... \
 #     JWT_SECRET=... \
-#     GOOGLE_CLIENT_ID=... \
+#     SENDER_GE_API_KEY=... \
+#     TEST_PHONE_NUMBERS=+995555000001:8264  # App Store review only \
 #     CORS_ORIGINS=https://your-app.example.com  # comma-separated for multiple
 #
 # Deploy:
@@ -64,4 +65,8 @@ primary_region = "fra"
   # SQLite + a single mounted volume → only one machine can hold the
   # write lock safely. Roll one VM at a time.
   strategy = "rolling"
-  max_unavailable = 0
+  # Must be > 0. With a single machine, `0` makes flyctl compute an empty
+  # rolling pool and abort the deploy ("pool size must be > 0"). Replacing the
+  # one machine that owns the volume means a short gap either way — there is no
+  # second machine to serve traffic while it restarts.
+  max_unavailable = 1

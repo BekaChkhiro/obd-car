@@ -7,10 +7,16 @@ import pytest
 
 # Configure auth settings BEFORE importing the app so Settings() picks them up.
 os.environ.setdefault("JWT_SECRET", "test-secret-do-not-use-in-prod-needs-32-bytes-minimum")
-os.environ.setdefault("GOOGLE_CLIENT_ID", "test-google-client-id")
 os.environ.setdefault("AUTH_RATE_LIMIT", "1000/minute")
+os.environ.setdefault("SMS_REQUEST_IP_RATE_LIMIT", "1000/hour")
 os.environ.setdefault("AI_RATE_LIMIT", "1000/hour")
 os.environ.setdefault("DB_PATH", ":memory:")
+# Not `setdefault`: `.env` is read by Settings and a developer's real key lives
+# there. A test that reaches the sender would spend money and text whoever owns
+# the number it made up, so the suite is never allowed to hold a usable key —
+# tests that need one patch `settings.sender_ge_api_key` themselves.
+os.environ["SENDER_GE_API_KEY"] = ""
+os.environ.setdefault("TEST_PHONE_NUMBERS", "")
 
 
 import httpx
