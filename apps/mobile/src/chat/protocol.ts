@@ -43,6 +43,24 @@ export type ClientFrame =
       supported_pids: string[];
       vin: string | null;
       locale: string;
+      // Whether the phone holds a live OBD-II link right now. The backend
+      // feeds this into the system prompt so the assistant says "not
+      // connected" instead of inventing a plausible reading.
+      adapter_connected: boolean;
+      // True when that link is the demo mock rather than a dongle in the car.
+      // Sent alongside `adapter_connected` rather than folded into it because
+      // the two answer different questions: readings are obtainable, but they
+      // are generated, so the assistant must never present them as this
+      // vehicle's.
+      adapter_simulated: boolean;
+    }
+  | {
+      type: 'adapter_status';
+      connected: boolean;
+      /** See `adapter_simulated` on `register` — same signal, mid-session. */
+      simulated: boolean;
+      supported_pids: string[];
+      vin: string | null;
     }
   | { type: 'user_message'; id: string; content: string }
   | {

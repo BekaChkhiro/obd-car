@@ -1,7 +1,10 @@
 /** @type {import('jest').Config} */
 module.exports = {
   testEnvironment: 'node',
-  testMatch: ['**/src/ble/**/*.test.ts'],
+  // Whole of src/, not just src/ble/: the honesty rules around simulated
+  // adapter data live in the store layer and are worth pinning too. Anything
+  // that reaches for a native module has to mock it — the environment is node.
+  testMatch: ['**/src/**/*.test.ts'],
   transform: {
     '^.+\\.tsx?$': [
       'babel-jest',

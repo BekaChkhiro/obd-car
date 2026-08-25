@@ -19,12 +19,38 @@ const BASE_WS_URL: string =
 
 const RECONNECT_DELAYS_MS = [500, 1000, 2000, 4000, 8000, 16000];
 
+/** Live OBD-II link state, as reported to the backend. */
+export interface AdapterState {
+  connected: boolean;
+  /**
+   * The link is the demo mock, not a dongle in a car. Kept separate from
+   * `connected` because both facts have to travel: the tools work, and every
+   * number they return is generated.
+   */
+  simulated: boolean;
+  supportedPids: string[];
+  vin: string | null;
+}
+
 export interface ChatClientOptions {
-  token: string;
+  /**
+   * Resolves the token for the next handshake, refreshing when asked.
+   *
+   * Called on every (re)connect rather than captured once: access tokens live
+   * ~15 minutes and this screen routinely stays mounted for longer. A token
+   * fixed at construction means the socket starts failing mid-session and —
+   * because the server accepts the socket before rejecting the token — retries
+   * forever without ever getting a usable one.
+   */
+  getToken: (forceRefresh: boolean) => Promise<string | null>;
   sessionId: string;
   locale?: string;
-  supportedPids?: string[];
-  vin?: string | null;
+  /**
+   * Read at every (re)connect rather than snapshotted at construction — the
+   * adapter can drop or come back while the socket stays up, and re-sending a
+   * stale "connected" would tell the assistant it can read a car it cannot.
+   */
+  getAdapterState?: () => AdapterState;
   onFrame: (frame: ServerFrame) => void;
   onStateChange?: (state: ChatConnectionState) => void;
   // Test/DI seam — used by unit tests to inject a fake WS implementation.
@@ -36,7 +62,9 @@ export type ChatConnectionState =
   | 'connecting'
   | 'connected'
   | 'reconnecting'
-  | 'closed';
+  | 'closed'
+  /** Signed out or the refresh token is spent — retrying cannot help. */
+  | 'unauthorized';
 
 export class ChatClient {
   private ws: WebSocket | null = null;
@@ -47,6 +75,10 @@ export class ChatClient {
   private explicitlyClosed = false;
   private state: ChatConnectionState = 'idle';
   private hasRegisteredOnce = false;
+  /** Ask the token provider to refresh on the next open. */
+  private forceTokenRefresh = false;
+  /** A freshly refreshed token was already rejected — stop retrying. */
+  private triedFreshToken = false;
 
   constructor(opts: ChatClientOptions) {
     this.opts = opts;
@@ -55,7 +87,7 @@ export class ChatClient {
   connect(): void {
     if (this.ws !== null) return;
     this.explicitlyClosed = false;
-    this.open();
+    void this.open();
   }
 
   close(): void {
@@ -92,6 +124,18 @@ export class ChatClient {
     this.send({ type: 'confirm_write', name });
   }
 
+  /** Push the current adapter state mid-session (adapter connected or dropped). */
+  sendAdapterStatus(): void {
+    const adapter = this.currentAdapterState();
+    this.send({
+      type: 'adapter_status',
+      connected: adapter.connected,
+      simulated: adapter.simulated,
+      supported_pids: adapter.supportedPids,
+      vin: adapter.vin,
+    });
+  }
+
   abort(): void {
     this.send({ type: 'abort' });
   }
@@ -102,22 +146,38 @@ export class ChatClient {
 
   // ── internals ──────────────────────────────────────────────────────────
 
-  private open(): void {
+  private async open(): Promise<void> {
+    this.setState(this.reconnectAttempt === 0 ? 'connecting' : 'reconnecting');
+
+    const token = await this.opts.getToken(this.forceTokenRefresh);
+    this.forceTokenRefresh = false;
+    // `close()` may have been called while the refresh was in flight.
+    if (this.explicitlyClosed) return;
+    if (!token) {
+      this.giveUpUnauthorized();
+      return;
+    }
+
     const url = `${BASE_WS_URL}/ws/session/${encodeURIComponent(
       this.opts.sessionId,
-    )}?token=${encodeURIComponent(this.opts.token)}`;
-    this.setState(this.reconnectAttempt === 0 ? 'connecting' : 'reconnecting');
+    )}?token=${encodeURIComponent(token)}`;
     const factory = this.opts.wsFactory ?? ((u: string) => new WebSocket(u));
     const ws = factory(url);
     this.ws = ws;
 
     ws.onopen = () => {
-      this.reconnectAttempt = 0;
+      // Deliberately *not* resetting `reconnectAttempt` here. The server
+      // accepts the socket before it validates the token, so a rejected
+      // connection also reaches `onopen` — resetting on open turned an expired
+      // token into a once-per-second reconnect loop that never backed off.
+      const adapter = this.currentAdapterState();
       this.send({
         type: 'register',
-        supported_pids: this.opts.supportedPids ?? [],
-        vin: this.opts.vin ?? null,
+        supported_pids: adapter.supportedPids,
+        vin: adapter.vin,
         locale: this.opts.locale ?? 'en',
+        adapter_connected: adapter.connected,
+        adapter_simulated: adapter.simulated,
       });
       if (this.hasRegisteredOnce && this.lastSeq > 0) {
         this.send({ type: 'resume', last_seq: this.lastSeq });
@@ -135,8 +195,24 @@ export class ChatClient {
         this.lastSeq = frame.seq;
       }
       if (frame.type === 'registered') {
+        // A working session is the only proof the connection is good, so this
+        // is where the back-off resets.
+        this.reconnectAttempt = 0;
+        this.triedFreshToken = false;
         this.hasRegisteredOnce = true;
         this.setState('connected');
+      }
+      if (frame.type === 'error' && frame.code === 'unauthorized') {
+        if (this.triedFreshToken) {
+          // Already retried with a newly minted token and still refused —
+          // the refresh token is gone too. Hammering the server won't fix it.
+          this.giveUpUnauthorized();
+          return;
+        }
+        // The server closes the socket after this; reconnect with a fresh one.
+        this.triedFreshToken = true;
+        this.forceTokenRefresh = true;
+        return;
       }
       this.opts.onFrame(frame);
     };
@@ -155,6 +231,35 @@ export class ChatClient {
     };
   }
 
+  /** Stop reconnecting and report that the user has to sign in again. */
+  private giveUpUnauthorized(): void {
+    this.explicitlyClosed = true;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    if (this.ws) {
+      try {
+        this.ws.close();
+      } catch {
+        // ignore
+      }
+      this.ws = null;
+    }
+    this.setState('unauthorized');
+  }
+
+  private currentAdapterState(): AdapterState {
+    return (
+      this.opts.getAdapterState?.() ?? {
+        connected: false,
+        simulated: false,
+        supportedPids: [],
+        vin: null,
+      }
+    );
+  }
+
   private send(frame: ClientFrame): void {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(frame));
@@ -171,7 +276,7 @@ export class ChatClient {
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
       if (!this.explicitlyClosed) {
-        this.open();
+        void this.open();
       }
     }, delay);
   }

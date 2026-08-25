@@ -3,29 +3,12 @@ import type { ChatMessage, ToolCall } from '../types/chat';
 import { ChatClient, type ChatConnectionState } from '../chat/client';
 import type { ServerFrame } from '../chat/protocol';
 import { connectionMachine } from '../ble/connection';
-
-// Mandatory OBD-II Mode 1 PIDs that every adapter-equipped vehicle supports.
-// Passed to the backend in the `register` frame so the AI knows it has live
-// vehicle data available even before any tool runs.
-const COMMON_SUPPORTED_PIDS = [
-  '0100', // PIDs supported [01–20]
-  '0101', // Monitor status
-  '0103', // Fuel system status
-  '0104', // Engine load
-  '0105', // Coolant temperature
-  '010B', // Intake manifold pressure
-  '010C', // Engine RPM
-  '010D', // Vehicle speed
-  '010E', // Timing advance
-  '010F', // Intake air temperature
-  '0111', // Throttle position
-  '011C', // OBD standards
-  '011F', // Runtime since engine start
-  '0121', // Distance with MIL on
-  '012F', // Fuel level
-  '0142', // Control module voltage
-  '0146', // Ambient air temperature
-];
+import { getFreshAccessToken } from '../lib/api';
+import type { AdapterState } from '../chat/client';
+import type { SQLiteDatabase } from 'expo-sqlite';
+import { appendMessage } from '../db/repositories/messages';
+import { appendToolCall, resolveToolCall } from '../db/repositories/tool-calls';
+import { touchSession } from '../db/repositories/sessions';
 
 function shortId(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -46,6 +29,44 @@ export type ToolExecutor = (
 // Module-scoped executor set by useToolExecutor hook.
 let toolExecutor: ToolExecutor | null = null;
 
+/**
+ * The live-link snapshot handed to the backend on every (re)connect.
+ *
+ * A simulated link counts as connected in every build, demo mode included:
+ * told there is no adapter, the assistant correctly refuses to read anything,
+ * which leaves demo mode unable to show the one feature it exists to show.
+ *
+ * What keeps that honest is `simulated` travelling beside it rather than being
+ * folded into it. The two facts answer different questions — whether a reading
+ * can be taken, and whether it came off the user's car — and the backend needs
+ * both to tell the model to report the numbers *as* generated. Collapsing them
+ * either way is a lie: `connected: false` hides a working demo, and dropping
+ * `simulated` hands the user an invented reading about their own vehicle.
+ */
+export function currentAdapterState(): AdapterState {
+  const simulated = connectionMachine.getAdapterKind() === 'simulated';
+  const connected = connectionMachine.hasLiveVehicleLink() || simulated;
+  return {
+    connected,
+    simulated,
+    supportedPids: connected ? [...connectionMachine.getSupportedPids()] : [],
+    // The backend decodes this into a make, which is what decides the meaning
+    // of a manufacturer-specific DTC. Sending null leaves the assistant
+    // guessing which brand a P1xxx belongs to.
+    vin: connected ? connectionMachine.getVin() : null,
+  };
+}
+
+/**
+ * Tell the backend the adapter came up or dropped, without reconnecting.
+ *
+ * No-op when the socket is closed — the state is re-sent in the `register`
+ * frame on the next connect anyway.
+ */
+export function notifyAdapterStatus(): void {
+  client?.sendAdapterStatus();
+}
+
 export function registerToolExecutor(fn: ToolExecutor): void {
   toolExecutor = fn;
 }
@@ -57,6 +78,22 @@ export function unregisterToolExecutor(): void {
 /** Send a tool result back to the backend over the open WebSocket. */
 export function sendToolResult(toolUseId: string, content: unknown, isError = false): void {
   client?.sendToolResult(toolUseId, content, isError);
+  // Keep the payload on the in-memory tool call. It is the only place the
+  // phone-side result exists — the backend's `tool_call_completed` frame
+  // carries timing, not data — and the journal writes it out at end of turn.
+  const serialised = typeof content === 'string' ? content : JSON.stringify(content);
+  useChatStore.setState((state) => ({
+    messages: state.messages.map((m) =>
+      m.toolCalls?.some((t) => t.id === toolUseId)
+        ? {
+            ...m,
+            toolCalls: m.toolCalls.map((t) =>
+              t.id === toolUseId ? { ...t, result: serialised } : t,
+            ),
+          }
+        : m,
+    ),
+  }));
 }
 
 interface ChatState {
@@ -68,7 +105,14 @@ interface ChatState {
   // Set when the backend blocked a write tool and is waiting for user OK.
   pendingWriteConfirmation: PendingWriteConfirmation | null;
 
-  connect: (opts: { token: string; sessionId: string; locale?: string }) => void;
+  connect: (opts: {
+    sessionId: string;
+    locale?: string;
+    /** Journal target. Omit to run the session without local history. */
+    db?: SQLiteDatabase;
+  }) => void;
+  /** Replace the transcript with messages loaded from local history. */
+  hydrateMessages: (messages: ChatMessage[]) => void;
   disconnect: () => void;
   sendUserMessage: (content: string) => void;
   confirmWrite: (followUpMessage: string) => void;
@@ -79,6 +123,28 @@ interface ChatState {
 
 // Module-scoped client so HMR / re-mounts don't open a second socket.
 let client: ChatClient | null = null;
+
+/**
+ * Journal target for the active session.
+ *
+ * Set by `connect(...)`. The SQLite handle is passed in from the React tree
+ * rather than opened here so every writer shares the one connection expo-sqlite
+ * hands out — a second connection to the same file invites `database is locked`
+ * under the dashboard poller's write rate.
+ */
+let journal: { db: SQLiteDatabase; sessionId: string } | null = null;
+
+/**
+ * Persist without ever failing a UI action.
+ *
+ * A journal write is bookkeeping; a message that reached the backend must still
+ * render if the local insert fails. Errors are swallowed deliberately.
+ */
+function persist(run: (j: { db: SQLiteDatabase; sessionId: string }) => Promise<unknown>): void {
+  const target = journal;
+  if (!target) return;
+  void Promise.resolve(run(target)).catch(() => undefined);
+}
 
 function applyFrame(
   set: (
@@ -131,6 +197,16 @@ function applyFrame(
       }));
       if (toolExecutor) {
         void toolExecutor(frame.tool_use_id, frame.name, frame.input);
+      } else {
+        // Nothing is mounted to run BLE commands. Answer immediately rather
+        // than going silent: an unanswered tool_call only surfaces to the model
+        // as a 5-second timeout, which reads like a flaky adapter and invites
+        // it to fill in a plausible value instead of reporting the failure.
+        sendToolResult(
+          frame.tool_use_id,
+          'No OBD-II adapter is connected — this reading could not be taken.',
+          true,
+        );
       }
       return;
     }
@@ -176,13 +252,42 @@ function applyFrame(
       }
       return;
 
-    case 'assistant_message_end':
+    case 'assistant_message_end': {
       set((s) => ({
         messages: s.messages.map((m) =>
           m.id === frame.message_id ? { ...m, isStreaming: false } : m,
         ),
       }));
+      // Write the finished turn out in one go. Tool calls are written here
+      // rather than when their frame arrives so the message row they reference
+      // already exists.
+      const finished = useChatStore
+        .getState()
+        .messages.find((m) => m.id === frame.message_id);
+      if (finished && finished.content.trim()) {
+        persist(async ({ db, sessionId }) => {
+          await appendMessage(db, {
+            id: frame.message_id,
+            session_id: sessionId,
+            role: 'assistant',
+            content: finished.content,
+          });
+          for (const tc of finished.toolCalls ?? []) {
+            await appendToolCall(db, {
+              id: tc.id,
+              message_id: frame.message_id,
+              tool_name: tc.name,
+              input: JSON.stringify(tc.input),
+            });
+            if (tc.result !== undefined) {
+              await resolveToolCall(db, tc.id, tc.result);
+            }
+          }
+          await touchSession(db, sessionId);
+        });
+      }
       return;
+    }
 
     case 'turn_complete':
       set(() => ({ isStreaming: false, streamingMessageId: null }));
@@ -225,21 +330,21 @@ export const useChatStore = create<ChatState>((set, get) => ({
   streamingMessageId: null,
   pendingWriteConfirmation: null,
 
-  connect: ({ token, sessionId, locale }) => {
+  connect: ({ sessionId, locale, db }) => {
+    journal = db ? { db, sessionId } : null;
     if (client !== null) {
       // Already connected/connecting to the same session — leave it alone.
       return;
     }
-    // Snapshot adapter state at chat-open time so the backend's register payload
-    // tells the AI whether vehicle data is reachable. Without this the
-    // supported_pids list is empty and Claude assumes "no adapter".
-    const adapter = connectionMachine.getAdapter();
-    const supportedPids = adapter ? COMMON_SUPPORTED_PIDS : [];
     client = new ChatClient({
-      token,
+      // Fetched per handshake, not captured here: this store outlives the
+      // 15-minute access token by a wide margin.
+      getToken: (forceRefresh) => getFreshAccessToken(forceRefresh),
       sessionId,
       locale: locale ?? 'en',
-      supportedPids,
+      // Read live rather than snapshotted: the adapter can come up or drop
+      // between opening the chat and the socket actually (re)connecting.
+      getAdapterState: currentAdapterState,
       onFrame: (frame) => applyFrame(set, frame),
       onStateChange: (s) => set(() => ({ connection: s })),
     });
@@ -251,6 +356,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
       client.close();
       client = null;
     }
+    // Drop the journal target with the socket: without a client no further
+    // frames arrive, and holding the handle would let a late write land on a
+    // session the screen has already left.
+    journal = null;
     set(() => ({ connection: 'closed', isStreaming: false, streamingMessageId: null }));
   },
 
@@ -270,6 +379,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
       ],
     }));
     client?.sendUserMessage(id, trimmed);
+    persist(async ({ db, sessionId }) => {
+      await appendMessage(db, {
+        id,
+        session_id: sessionId,
+        role: 'user',
+        content: trimmed,
+      });
+      // Bump the session so it sorts to the top of history, and reopen it if
+      // the user had previously closed it.
+      await touchSession(db, sessionId);
+    });
   },
 
   confirmWrite: (followUpMessage: string) => {
@@ -298,6 +418,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
         : s.messages,
     }));
   },
+
+  hydrateMessages: (messages) =>
+    set(() => ({
+      messages,
+      isStreaming: false,
+      streamingMessageId: null,
+      pendingWriteConfirmation: null,
+    })),
 
   clearMessages: () =>
     set(() => ({

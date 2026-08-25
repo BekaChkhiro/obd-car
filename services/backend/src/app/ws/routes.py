@@ -4,7 +4,8 @@ Protocol
 --------
 Inbound (phone → backend):
   * ``{"type":"auth","token":"<jwt>"}``       — only if no `?token=` query
-  * ``{"type":"register","supported_pids":[...],"vin":...,"locale":...}``
+  * ``{"type":"register","supported_pids":[...],"vin":...,"locale":...,"adapter_connected":bool,"adapter_simulated":bool}``
+  * ``{"type":"adapter_status","connected":bool,"simulated":bool,"supported_pids":[...],"vin":...}``
   * ``{"type":"user_message","id":"...","content":"..."}``
   * ``{"type":"tool_result","tool_use_id":"...","content":...,"is_error":false}``
   * ``{"type":"confirm_write","name":"<tool>"}``  — user confirms a write tool
@@ -44,10 +45,12 @@ from typing import Any
 
 import structlog
 from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth.rate_limit import check_ai_rate_limit
 from ..claude import (
+    DEFAULT_TOOLS,
     ClaudeClient,
     TextDelta,
     ToolCallCompleted,
@@ -56,6 +59,7 @@ from ..claude import (
     TurnComplete,
     WebSocketToolTransport,
     build_system_prompt,
+    resolve_make,
     run_assistant_turn,
 )
 from ..config import settings
@@ -75,6 +79,12 @@ _CLOSE_FORBIDDEN = 4003
 # typical assistant turn (start + many text_delta + a few tool events + end +
 # turn_complete) plus a margin for short-lived drops mid-stream.
 _REPLAY_BUFFER_SIZE = 256
+
+# How long a new user message waits for a turn that has already streamed its
+# `turn_complete` frame to finish its trailing bookkeeping. The phone renders
+# the answer the moment that frame lands, so the user can (and does) hit send
+# while the backend is still committing the transcript.
+_TURN_SETTLE_SECONDS = 5.0
 
 
 # ── Authentication ────────────────────────────────────────────────────────────
@@ -134,17 +144,40 @@ class _SessionState:
     vin: str | None
     locale: str
     transport: WebSocketToolTransport
+    # Whether the phone currently holds a live OBD-II link. Fed into the system
+    # prompt every turn so the model states "not connected" instead of guessing
+    # a plausible reading when its tools cannot reach the ECU.
+    adapter_connected: bool = False
+    # Whether that link is the demo simulator rather than a dongle in a car.
+    # Travels beside `adapter_connected` instead of overriding it: in demo mode
+    # the tools genuinely work, so the model must be told it can read *and*
+    # that every value is generated — folding the two together would either
+    # cripple the demo or let it describe invented numbers as the user's car.
+    adapter_simulated: bool = False
     messages: list[dict[str, Any]] = field(default_factory=list)
     seq: int = 0
     replay: deque[dict[str, Any]] = field(
         default_factory=lambda: deque(maxlen=_REPLAY_BUFFER_SIZE)
     )
     turn_task: asyncio.Task[None] | None = None
+    # True once the running turn has emitted `turn_complete` — it is then only
+    # persisting the transcript, and a follow-up message may wait for it rather
+    # than being refused as `busy`.
+    turn_complete_sent: bool = False
     # Write tools pre-approved by the user via a `confirm_write` frame.
     # Consumed (cleared) at the start of each turn so confirmation is one-shot.
     confirmed_writes: set[str] = field(default_factory=set)
     # Cumulative Anthropic API tokens consumed this session (input + output).
     tokens_used: int = 0
+    # Codes the phone last read off the ECU. Carried into the system prompt so
+    # the model is handed their authoritative definitions rather than recalling
+    # them — its recall of a manufacturer-specific code is really a guess at
+    # which brand the number belongs to.
+    recent_dtcs: list[str] = field(default_factory=list)
+    # Make decoded from the VIN, filled on the first turn that has a VIN.
+    # None means unknown, never a default: the wrong make yields the wrong
+    # definition for every manufacturer-specific code.
+    make: str | None = None
 
     async def send(self, frame: dict[str, Any]) -> None:
         self.seq += 1
@@ -186,6 +219,7 @@ async def _run_turn(
     assistant_message_id = uuid.uuid4().hex
     pending_text: list[str] = []
     started = False
+    state.turn_complete_sent = False
 
     async def ensure_started() -> None:
         nonlocal started
@@ -198,7 +232,22 @@ async def _run_turn(
                 }
             )
 
-    system_blocks = build_system_prompt(locale=state.locale, vin=state.vin)
+    # Decode the VIN into a make before building the prompt. Cached per VIN, so
+    # this costs one short request per vehicle; if it fails the make stays None
+    # and the assistant asks which car this is, which is slower than a wrong
+    # answer but is not one.
+    if state.make is None and state.vin:
+        state.make = await resolve_make(state.vin)
+
+    system_blocks = build_system_prompt(
+        locale=state.locale,
+        make=state.make,
+        vin=state.vin,
+        adapter_connected=state.adapter_connected,
+        adapter_simulated=state.adapter_simulated,
+        supported_pids=state.supported_pids,
+        recent_dtcs=state.recent_dtcs or None,
+    )
 
     # Snapshot and clear confirmed_writes atomically — confirmation is one-shot.
     confirmed_snap = frozenset(state.confirmed_writes)
@@ -263,6 +312,7 @@ async def _run_turn(
                             "message_id": assistant_message_id,
                         }
                     )
+                state.turn_complete_sent = True
                 await state.send(
                     {
                         "type": "turn_complete",
@@ -280,6 +330,7 @@ async def _run_turn(
                     "message_id": assistant_message_id,
                 }
             )
+        state.turn_complete_sent = True
         await state.send(
             {"type": "turn_complete", "stop_reason": "aborted", "iterations": 0}
         )
@@ -348,7 +399,14 @@ async def _handle_user_message(
         )
         return
 
-    if state.turn_task is not None and not state.turn_task.done():
+    task = state.turn_task
+    if task is not None and not task.done() and state.turn_complete_sent:
+        # The answer is already on screen and the turn is only writing the
+        # transcript out. Waiting is safe here — a finished turn asks the phone
+        # for nothing, so no tool_result can be stuck behind this frame.
+        await asyncio.wait({task}, timeout=_TURN_SETTLE_SECONDS)
+
+    if task is not None and not task.done():
         await state.send(
             {
                 "type": "error",
@@ -358,7 +416,6 @@ async def _handle_user_message(
         )
         return
 
-    state.messages.append({"role": "user", "content": content})
     db.add(
         Message(
             id=message_id,
@@ -367,11 +424,62 @@ async def _handle_user_message(
             content=content,
         )
     )
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        # Same message id twice — a resend after a flaky connection, or a
+        # client bug. Persisting is impossible and re-running the turn would
+        # answer twice, but an uncaught error here tears the WebSocket down and
+        # costs the user their whole conversation. Refuse just this frame.
+        await db.rollback()
+        log.info(
+            "ws_duplicate_message_id",
+            session_id=state.session_id,
+            message_id=message_id,
+        )
+        await state.send(
+            {
+                "type": "error",
+                "code": "duplicate_message",
+                "message": f"message id {message_id!r} was already received",
+            }
+        )
+        return
+
+    state.messages.append({"role": "user", "content": content})
 
     state.turn_task = asyncio.create_task(
         _run_turn(state, client=client, db=db, tools=tools)
     )
+
+
+# Cap on codes carried in the prompt. A healthy ECU stores a handful; a very
+# sick one can report dozens, and the whole list would crowd the context for no
+# diagnostic gain.
+_MAX_REMEMBERED_DTCS = 20
+
+
+def _remember_dtcs(state: _SessionState, content: Any) -> None:
+    """Record codes from a `read_dtcs`-shaped tool result.
+
+    Keyed on the payload's shape rather than the tool name so it covers stored,
+    pending and permanent reads alike without the WS layer having to track
+    which tool a `tool_use_id` belonged to.
+    """
+    if not isinstance(content, dict):
+        return
+    entries = content.get("dtcs")
+    if not isinstance(entries, list):
+        return
+
+    codes = list(state.recent_dtcs)
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        code = entry.get("code")
+        if isinstance(code, str) and code and code not in codes:
+            codes.append(code)
+    state.recent_dtcs = codes[:_MAX_REMEMBERED_DTCS]
 
 
 async def _handle_tool_result(
@@ -387,9 +495,13 @@ async def _handle_tool_result(
             }
         )
         return
+    content = frame.get("content")
+    if not frame.get("is_error", False):
+        _remember_dtcs(state, content)
+
     resolved = state.transport.resolve(
         tool_use_id,
-        frame.get("content"),
+        content,
         is_error=bool(frame.get("is_error", False)),
     )
     if not resolved:
@@ -398,6 +510,49 @@ async def _handle_tool_result(
             session_id=state.session_id,
             tool_use_id=tool_use_id,
         )
+
+
+async def _handle_adapter_status(state: _SessionState, frame: dict[str, Any]) -> None:
+    """Update live-link state mid-session.
+
+    The phone sends this whenever the OBD-II adapter connects or drops, so the
+    next turn's system prompt reflects reality without forcing a reconnect of
+    the WebSocket. Getting this wrong in the "connected" direction is the
+    dangerous one — the model would be told it can read a car it cannot reach —
+    so anything other than an explicit ``true`` is treated as disconnected.
+    """
+    connected = frame.get("connected") is True
+    state.adapter_connected = connected
+    # Only meaningful while connected, and defaults to "real" the same way
+    # `connected` defaults to "no link": a client that omits the flag is one
+    # that has no simulator, so an absent field must never quietly mark a real
+    # car's readings as generated either.
+    state.adapter_simulated = connected and frame.get("simulated") is True
+
+    pids = frame.get("supported_pids")
+    if isinstance(pids, list):
+        state.supported_pids = [str(p) for p in pids]
+    if not connected:
+        # Drop the PID list and the code set with the link. Keeping either
+        # would let a later reconnect inherit facts that were never re-verified
+        # on this vehicle — and the next car on this dongle is a different car.
+        state.supported_pids = []
+        state.recent_dtcs = []
+
+    vin = frame.get("vin")
+    if isinstance(vin, str) and vin and vin != state.vin:
+        state.vin = vin
+        state.make = None
+        state.recent_dtcs = []
+
+    log.info(
+        "ws_adapter_status",
+        session_id=state.session_id,
+        connected=connected,
+        simulated=state.adapter_simulated,
+        supported_pid_count=len(state.supported_pids),
+    )
+    await state.send({"type": "ack", "received": "adapter_status"})
 
 
 async def _handle_confirm_write(state: _SessionState, frame: dict[str, Any]) -> None:
@@ -458,6 +613,17 @@ async def ws_session(
     supported_pids: list[str] = frame.get("supported_pids") or []
     vin: str | None = frame.get("vin")
     locale: str = frame.get("locale") or "en"
+    # Older clients don't send `adapter_connected`. Falling back to
+    # `bool(supported_pids)` matches what those clients meant: the phone only
+    # populated the PID list when it had a live adapter.
+    raw_connected = frame.get("adapter_connected")
+    adapter_connected: bool = (
+        raw_connected is True if raw_connected is not None else bool(supported_pids)
+    )
+    # Absent means a real adapter: only a client new enough to have demo mode
+    # sends this, and guessing "simulated" for an old client would have the
+    # assistant disown readings that really did come off the user's car.
+    adapter_simulated: bool = adapter_connected and frame.get("adapter_simulated") is True
 
     # Reuse an existing diagnostic_session row if it already exists (e.g. on
     # reconnect with the same session_id); otherwise create one.
@@ -484,7 +650,14 @@ async def ws_session(
         db.add(ds)
         await db.commit()
 
-    log.info("ws_session_registered", session_id=session_id, user_id=user_id, vin=vin)
+    log.info(
+        "ws_session_registered",
+        session_id=session_id,
+        user_id=user_id,
+        vin=vin,
+        adapter_connected=adapter_connected,
+        adapter_simulated=adapter_simulated,
+    )
 
     state = _SessionState(
         websocket=websocket,
@@ -494,13 +667,19 @@ async def ws_session(
         vin=vin,
         locale=locale,
         transport=WebSocketToolTransport(websocket),
+        adapter_connected=adapter_connected,
+        adapter_simulated=adapter_simulated,
     )
     await state.send(
         {"type": "registered", "session_id": session_id, "user_id": user_id}
     )
 
     client = _claude_client_for(websocket)
-    tools = getattr(websocket.app.state, "claude_tools", None)
+    # Fall back to the built-in catalogue when the app didn't install one.
+    # Without tools the model cannot request a reading at all — and a model
+    # asked for a number it cannot fetch tends to narrate a plausible one, so
+    # an empty tool list is a correctness bug, not a degraded mode.
+    tools = getattr(websocket.app.state, "claude_tools", None) or DEFAULT_TOOLS
 
     handlers: dict[str, Callable[[dict[str, Any]], Awaitable[None]]] = {
         "user_message": lambda f: _handle_user_message(
@@ -508,6 +687,7 @@ async def ws_session(
         ),
         "tool_result": lambda f: _handle_tool_result(state, f),
         "confirm_write": lambda f: _handle_confirm_write(state, f),
+        "adapter_status": lambda f: _handle_adapter_status(state, f),
         "abort": lambda _f: _handle_abort(state),
         "resume": lambda f: state.replay_since(int(f.get("last_seq", 0))),
     }
