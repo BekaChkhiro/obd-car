@@ -2,16 +2,40 @@
 
 from __future__ import annotations
 
+import hashlib
+import re
 import uuid
 from datetime import UTC, datetime, timedelta
+from unittest.mock import patch
+
+_CODE_RE = re.compile(r"code is (\d{4})")
+
+
+def _phone_from_seed(seed: str) -> str:
+    """A distinct, deterministic Georgian mobile number per test identifier.
+
+    These tests only need distinct accounts, not real seeds — reusing the
+    old email-address literals as the seed keeps every call site unchanged.
+    """
+    digits = str(int(hashlib.sha1(seed.encode()).hexdigest(), 16))[-8:].zfill(8)
+    return f"+9955{digits}"
 
 
 async def _register_and_auth(client, email: str = "syncer@example.com") -> str:
-    resp = await client.post(
-        "/auth/register",
-        json={"email": email, "password": "supersecret1"},
-    )
-    assert resp.status_code == 201, resp.text
+    phone = _phone_from_seed(email)
+    captured: list[str] = []
+
+    async def fake_send(*, to: str, text: str) -> None:
+        captured.append(_CODE_RE.search(text).group(1))
+
+    with patch("app.auth.routes.send_sms", fake_send):
+        resp = await client.post(
+            "/auth/request-code",
+            json={"phone": phone, "first_name": "Sync", "last_name": "Tester"},
+        )
+        assert resp.status_code == 200, resp.text
+        resp = await client.post("/auth/verify-code", json={"phone": phone, "code": captured[-1]})
+    assert resp.status_code == 200, resp.text
     return resp.json()["tokens"]["access_token"]
 
 

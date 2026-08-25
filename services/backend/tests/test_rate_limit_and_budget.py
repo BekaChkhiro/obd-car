@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import re
 from dataclasses import dataclass, field
 from typing import Any
 from unittest.mock import patch
@@ -16,6 +18,8 @@ from app.auth import rate_limit as rl_module
 from app.auth.rate_limit import check_ai_rate_limit
 from app.db import Base, get_session
 from app.main import app
+
+_CODE_RE = re.compile(r"code is (\d{4})")
 
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -48,11 +52,31 @@ def ws_client(tmp_path):
     asyncio.run(_teardown())
 
 
+def _phone_from_seed(seed: str) -> str:
+    """A distinct, deterministic Georgian mobile number per test identifier.
+
+    These tests only need distinct accounts, not real seeds — reusing the
+    old email-address literals as the seed keeps every call site unchanged.
+    """
+    digits = str(int(hashlib.sha1(seed.encode()).hexdigest(), 16))[-8:].zfill(8)
+    return f"+9955{digits}"
+
+
 def _register(client: TestClient, email: str) -> str:
-    resp = client.post(
-        "/auth/register", json={"email": email, "password": "supersecret1", "locale": "en"}
-    )
-    assert resp.status_code == 201, resp.text
+    phone = _phone_from_seed(email)
+    captured: list[str] = []
+
+    async def fake_send(*, to: str, text: str) -> None:
+        captured.append(_CODE_RE.search(text).group(1))
+
+    with patch("app.auth.routes.send_sms", fake_send):
+        resp = client.post(
+            "/auth/request-code",
+            json={"phone": phone, "first_name": "RL", "last_name": "Tester"},
+        )
+        assert resp.status_code == 200, resp.text
+        resp = client.post("/auth/verify-code", json={"phone": phone, "code": captured[-1]})
+    assert resp.status_code == 200, resp.text
     return resp.json()["tokens"]["access_token"]
 
 

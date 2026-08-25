@@ -664,3 +664,213 @@ async def test_websocket_transport_fail_all_wakes_all_pending():
 def test_client_constructor_smoke():
     cc = ClaudeClient(client=MagicMock())
     assert cc.default_model
+
+
+# ── Server tools: pause_turn ──────────────────────────────────────────────────
+
+
+def _server_tool_use(*, id: str, name: str, input: dict[str, Any]) -> dict[str, Any]:
+    return {"type": "server_tool_use", "id": id, "name": name, "input": input}
+
+
+def _web_search_result(*, tool_use_id: str) -> dict[str, Any]:
+    return {
+        "type": "web_search_tool_result",
+        "tool_use_id": tool_use_id,
+        "content": [
+            {
+                "type": "web_search_result",
+                "url": "https://obd-codes.com/p1133",
+                "title": "P1133",
+                "encrypted_content": "EqgfCioIARgBIiQ3",
+            }
+        ],
+    }
+
+
+@pytest.mark.asyncio
+async def test_pause_turn_resumes_instead_of_truncating_the_answer():
+    """A paused server-tool turn must be resent, not treated as terminal.
+
+    Web search can push a long turn over the server-side limit; the API then
+    returns `pause_turn` with the work unfinished. Breaking there produces an
+    answer that stops mid-sentence with no error raised anywhere — the worst
+    kind of failure, because it reads like a complete reply.
+    """
+    client = _ScriptedClient(
+        streams=[
+            _FakeStream(
+                events=[_FakeContentBlockDeltaEvent(_FakeTextDelta("Looking that up"))],
+                final_message=_FakeMessage(
+                    content=[
+                        _text("Looking that up"),
+                        _server_tool_use(
+                            id="srvtoolu_1", name="web_search", input={"query": "P1133 Honda"}
+                        ),
+                        _web_search_result(tool_use_id="srvtoolu_1"),
+                    ],
+                    stop_reason="pause_turn",
+                ),
+            ),
+            _FakeStream(
+                events=[_FakeContentBlockDeltaEvent(_FakeTextDelta(" — it is HO2S switching."))],
+                final_message=_FakeMessage(
+                    content=[_text(" — it is HO2S switching.")], stop_reason="end_turn"
+                ),
+            ),
+        ]
+    )
+    transport = _ScriptedTransport()
+    messages: list[dict[str, Any]] = [{"role": "user", "content": "what is P1133?"}]
+
+    events: list[Any] = []
+    async for evt in run_assistant_turn(
+        client=client,  # type: ignore[arg-type]
+        transport=transport,
+        messages=messages,
+        tools=[],
+    ):
+        events.append(evt)
+
+    final = [e for e in events if isinstance(e, TurnComplete)][0]
+    assert final.stop_reason == "end_turn"
+    assert not client.streams, "the paused turn was never resumed"
+
+    # Resuming means resending the paused assistant message unchanged — the
+    # API rejects a web_search_tool_result whose encrypted_content was altered.
+    # (The dispatcher mutates `messages` in place and hands the same list to
+    # every request, so assert on the history rather than on one snapshot.)
+    result_blocks = [
+        b
+        for m in messages
+        if m["role"] == "assistant"
+        for b in m["content"]
+        if b["type"] == "web_search_tool_result"
+    ]
+    assert len(result_blocks) == 1
+    assert result_blocks[0]["content"][0]["encrypted_content"] == "EqgfCioIARgBIiQ3"
+
+    text = "".join(e.text for e in events if isinstance(e, TextDelta))
+    assert text == "Looking that up — it is HO2S switching."
+
+
+@pytest.mark.asyncio
+async def test_pause_turn_does_not_spend_the_tool_iteration_budget():
+    """Pauses extend the budget; they are extra requests, not tool round-trips.
+
+    Otherwise a search-heavy turn eats the iterations the phone-side reads
+    still need, and the model runs out of budget before it can call read_pid.
+    """
+    paused = [
+        _FakeStream(
+            events=[],
+            final_message=_FakeMessage(
+                content=[_text("searching")], stop_reason="pause_turn"
+            ),
+        )
+        for _ in range(2)
+    ]
+    client = _ScriptedClient(
+        streams=[
+            *paused,
+            _FakeStream(
+                events=[],
+                final_message=_FakeMessage(
+                    content=[
+                        _tool_use(id="t1", name="read_pid", input={"pid": "010C"})
+                    ],
+                    stop_reason="tool_use",
+                ),
+            ),
+            _FakeStream(
+                events=[_FakeContentBlockDeltaEvent(_FakeTextDelta("2450 rpm"))],
+                final_message=_FakeMessage(content=[_text("2450 rpm")], stop_reason="end_turn"),
+            ),
+        ]
+    )
+    transport = _ScriptedTransport()
+    transport.queue("read_pid", {"pid": "Engine RPM", "value": 2450, "unit": "rpm"})
+    messages: list[dict[str, Any]] = [{"role": "user", "content": "rpm?"}]
+
+    events: list[Any] = []
+    async for evt in run_assistant_turn(
+        client=client,  # type: ignore[arg-type]
+        transport=transport,
+        messages=messages,
+        tools=[],
+        max_iterations=2,
+    ):
+        events.append(evt)
+
+    final = [e for e in events if isinstance(e, TurnComplete)][0]
+    assert final.stop_reason == "end_turn"
+    assert [c["name"] for c in transport.calls] == ["read_pid"]
+
+
+@pytest.mark.asyncio
+async def test_pause_turn_storm_is_capped():
+    """A server tool that never settles must not bill forever."""
+    client = _ScriptedClient(
+        streams=[
+            _FakeStream(
+                events=[],
+                final_message=_FakeMessage(content=[_text("…")], stop_reason="pause_turn"),
+            )
+            for _ in range(10)
+        ]
+    )
+    transport = _ScriptedTransport()
+    messages: list[dict[str, Any]] = [{"role": "user", "content": "hi"}]
+
+    events: list[Any] = []
+    async for evt in run_assistant_turn(
+        client=client,  # type: ignore[arg-type]
+        transport=transport,
+        messages=messages,
+        tools=[],
+        max_pause_continuations=3,
+    ):
+        events.append(evt)
+
+    final = [e for e in events if isinstance(e, TurnComplete)][0]
+    assert final.stop_reason == "pause_turn"
+    # One initial request plus the capped number of resumes.
+    assert len(client.calls) == 4
+
+
+@pytest.mark.asyncio
+async def test_server_tool_blocks_are_never_dispatched_to_the_phone():
+    """`server_tool_use` runs on Anthropic's side; the phone has no handler.
+
+    Routing one over the WebSocket bridge would surface to the user as
+    'Unknown tool' and strand the turn waiting for a result that never comes.
+    """
+    client = _ScriptedClient(
+        streams=[
+            _FakeStream(
+                events=[],
+                final_message=_FakeMessage(
+                    content=[
+                        _server_tool_use(
+                            id="srvtoolu_9", name="web_search", input={"query": "P1133"}
+                        ),
+                        _web_search_result(tool_use_id="srvtoolu_9"),
+                        _text("Per obd-codes.com, …"),
+                    ],
+                    stop_reason="end_turn",
+                ),
+            )
+        ]
+    )
+    transport = _ScriptedTransport()
+    messages: list[dict[str, Any]] = [{"role": "user", "content": "what is P1133?"}]
+
+    async for _ in run_assistant_turn(
+        client=client,  # type: ignore[arg-type]
+        transport=transport,
+        messages=messages,
+        tools=[],
+    ):
+        pass
+
+    assert transport.calls == []

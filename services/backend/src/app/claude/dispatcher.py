@@ -56,6 +56,13 @@ DEFAULT_TOOL_TIMEOUT_SECONDS: float = 5.0
 # is the source of truth and can be re-queried.
 DEFAULT_MAX_TOOL_RESULT_BYTES: int = 16_384
 DEFAULT_MAX_ITERATIONS: int = 8
+# Server-side tools (web search) can return `stop_reason: "pause_turn"` when a
+# turn runs long: the work is mid-flight and the API wants the paused assistant
+# message sent back unchanged to resume. Without a branch for it the loop treats
+# the pause as terminal and the user gets a sentence that stops mid-thought, with
+# no error anywhere. Pauses are capped separately from the tool budget because
+# they are not tool round-trips.
+DEFAULT_MAX_PAUSE_CONTINUATIONS: int = 4
 
 _TRUNCATION_MARKER: str = "\n[truncated]"
 
@@ -185,6 +192,7 @@ async def run_assistant_turn(
     tool_timeout: float = DEFAULT_TOOL_TIMEOUT_SECONDS,
     max_tool_result_bytes: int = DEFAULT_MAX_TOOL_RESULT_BYTES,
     max_iterations: int = DEFAULT_MAX_ITERATIONS,
+    max_pause_continuations: int = DEFAULT_MAX_PAUSE_CONTINUATIONS,
     extra_headers: dict[str, str] | None = None,
 ) -> AsyncIterator[DispatcherEvent]:
     """Run one assistant turn (potentially multi-step with tool calls).
@@ -194,11 +202,15 @@ async def run_assistant_turn(
     """
     confirmed = frozenset(confirmed_writes or ())
     iterations = 0
+    pause_continuations = 0
     last_stop_reason: str = "unknown"
     total_input_tokens: int = 0
     total_output_tokens: int = 0
 
-    while iterations < max_iterations:
+    # A resumed pause costs another request but no tool round-trip, so it
+    # extends the budget rather than spending it — otherwise a search-heavy
+    # turn would starve the phone-side tool calls that follow it.
+    while iterations < max_iterations + pause_continuations:
         iterations += 1
 
         async with client.stream(
@@ -241,6 +253,18 @@ async def run_assistant_turn(
                 "content": [_block_to_dict(b) for b in content_blocks],
             }
         )
+
+        if stop_reason == "pause_turn":
+            # The assistant turn is already appended verbatim above, which is
+            # exactly what resuming requires — just ask again.
+            if pause_continuations >= max_pause_continuations:
+                log.warning(
+                    "dispatcher_max_pause_continuations_exceeded",
+                    pause_continuations=pause_continuations,
+                )
+                break
+            pause_continuations += 1
+            continue
 
         if stop_reason != "tool_use":
             break
@@ -344,7 +368,7 @@ async def run_assistant_turn(
 
         messages.append({"role": "user", "content": tool_results})
 
-    if iterations >= max_iterations and last_stop_reason == "tool_use":
+    if iterations >= max_iterations + pause_continuations and last_stop_reason == "tool_use":
         # Model kept asking for tools beyond the safety cap. Stop here so we
         # don't burn unbounded credits; the caller can render the partial
         # transcript and ask the user how to proceed.

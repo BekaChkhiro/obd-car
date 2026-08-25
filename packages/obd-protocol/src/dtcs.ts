@@ -165,3 +165,34 @@ export function parseVinFrame(frame: string): string | null {
 
   return vin.length > 0 ? vin : null;
 }
+
+/**
+ * True when the code number falls in an SAE J2012 standardised range — the
+ * fault means the same thing on every manufacturer.
+ *
+ * This is decided by the number alone, never by whether we happen to hold a
+ * description for it. Membership in a table is a fact about our data; being
+ * generic is a fact about the code, and conflating the two is how a Ford's
+ * definition of P1133 ends up quoted at the owner of a Toyota.
+ *
+ *   P0xxx, P2xxx          generic        P1xxx, P30xx-P33xx   manufacturer
+ *   P34xx-P39xx  generic
+ *   B0xxx, C0xxx, U0xxx   generic        B1-B3, C1-C3, U1-U3  manufacturer
+ */
+export function isSaeGenericCode(code: string): boolean {
+  const upper = code.trim().toUpperCase();
+  if (!/^[PBCU][0-9A-F]{4}$/.test(upper)) return false;
+
+  const category = upper[0]!;
+  const subcategory = upper[1]!;
+
+  if (category === 'P') {
+    if (subcategory === '0' || subcategory === '2') return true;
+    // P3000-P33xx are manufacturer-defined; P3400-P39xx returned to SAE.
+    if (subcategory === '3') return upper[2]! >= '4' && upper[2]! <= '9';
+    return false;
+  }
+
+  // Body, Chassis and Network codes: only the x0xxx block is standardised.
+  return subcategory === '0';
+}
