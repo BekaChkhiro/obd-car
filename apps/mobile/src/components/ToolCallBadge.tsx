@@ -2,10 +2,10 @@ import { View, Text } from 'react-native';
 import type { ToolCall } from '../types/chat';
 
 const STATUS_CONFIG = {
-  pending: { label: 'PENDING', bg: 'bg-zinc-800', border: 'border-zinc-700', text: 'text-zinc-400', dot: 'bg-zinc-500' },
-  running: { label: 'RUNNING', bg: 'bg-cyan-500/10', border: 'border-cyan-500/30', text: 'text-cyan-300', dot: 'bg-cyan-400' },
-  done: { label: 'DONE', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', text: 'text-emerald-300', dot: 'bg-emerald-400' },
-  error: { label: 'ERROR', bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-300', dot: 'bg-red-400' },
+  pending: { label: 'PENDING', bg: 'bg-surface-muted', border: 'border-border-strong', text: 'text-text-muted', dot: 'bg-text-muted' },
+  running: { label: 'RUNNING', bg: 'bg-accent-soft', border: 'border-accent', text: 'text-accent', dot: 'bg-accent' },
+  done: { label: 'DONE', bg: 'bg-success-soft', border: 'border-success/30', text: 'text-success', dot: 'bg-success' },
+  error: { label: 'ERROR', bg: 'bg-danger-soft', border: 'border-danger/30', text: 'text-danger', dot: 'bg-danger' },
 } satisfies Record<ToolCall['status'], { label: string; bg: string; border: string; text: string; dot: string }>;
 
 interface Props {

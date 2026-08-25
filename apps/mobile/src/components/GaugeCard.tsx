@@ -31,9 +31,9 @@ function getStatus(value: number, thresholds: GaugeThresholds): GaugeStatus {
 }
 
 const STATUS: Record<GaugeStatus, { bar: string; text: string; dot: string; label: string }> = {
-  good: { bar: 'bg-emerald-400', text: 'text-emerald-400', dot: 'bg-emerald-400', label: 'OK' },
-  warn: { bar: 'bg-amber-400', text: 'text-amber-400', dot: 'bg-amber-400', label: 'WARN' },
-  danger: { bar: 'bg-red-400', text: 'text-red-400', dot: 'bg-red-400', label: 'DANGER' },
+  good: { bar: 'bg-success', text: 'text-success', dot: 'bg-success', label: 'OK' },
+  warn: { bar: 'bg-warning', text: 'text-warning', dot: 'bg-warning', label: 'WARN' },
+  danger: { bar: 'bg-danger', text: 'text-danger', dot: 'bg-danger', label: 'DANGER' },
 };
 
 export function GaugeCard({
@@ -58,34 +58,34 @@ export function GaugeCard({
 
   return (
     <View
-      className={`overflow-hidden rounded-2xl border bg-zinc-900/60 p-4 ${
-        alertActive ? 'border-red-500/50' : 'border-zinc-800'
+      className={`overflow-hidden rounded-2xl border bg-surface p-4 ${
+        alertActive ? 'border-danger/30' : 'border-border'
       } ${className}`}
     >
       <View className="flex-row items-center justify-between">
-        <Text className="text-[10px] font-bold tracking-[2px] text-zinc-500">{label.toUpperCase()}</Text>
+        <Text className="text-[10px] font-bold tracking-[2px] text-text-muted">{label.toUpperCase()}</Text>
         {hasValue ? (
           <View className="flex-row items-center gap-1.5">
             <View className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
             <Text className={`text-[9px] font-bold tracking-widest ${s.text}`}>{s.label}</Text>
           </View>
         ) : (
-          <Text className="text-[9px] font-bold tracking-widest text-zinc-700">NO DATA</Text>
+          <Text className="text-[9px] font-bold tracking-widest text-text-dim">NO DATA</Text>
         )}
       </View>
 
       <View className="mt-3 flex-row items-baseline">
         <Text
           className={`text-4xl font-bold tabular-nums ${
-            hasValue ? 'text-zinc-50' : 'text-zinc-700'
+            hasValue ? 'text-text-primary' : 'text-text-dim'
           }`}
         >
           {displayValue}
         </Text>
-        {hasValue && <Text className="ml-1.5 text-sm text-zinc-500">{unit}</Text>}
+        {hasValue && <Text className="ml-1.5 text-sm text-text-muted">{unit}</Text>}
       </View>
 
-      <View className="mt-3 h-1 overflow-hidden rounded-full bg-zinc-800">
+      <View className="mt-3 h-1 overflow-hidden rounded-full bg-surface-muted">
         <View
           className={`h-full rounded-full ${s.bar}`}
           style={{ width: `${Math.round(progress * 100)}%` }}
@@ -93,8 +93,8 @@ export function GaugeCard({
       </View>
 
       <View className="mt-1.5 flex-row justify-between">
-        <Text className="text-[10px] text-zinc-600 tabular-nums">{min}</Text>
-        <Text className="text-[10px] text-zinc-600 tabular-nums">{max}</Text>
+        <Text className="text-[10px] text-text-dim tabular-nums">{min}</Text>
+        <Text className="text-[10px] text-text-dim tabular-nums">{max}</Text>
       </View>
     </View>
   );

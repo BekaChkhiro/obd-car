@@ -75,6 +75,53 @@ const migrations: Migration[] = [
       );
     `);
   },
+  // v3 — session control (title / lifecycle / soft delete) + live recordings
+  async (db) => {
+    await db.execAsync(`
+      ALTER TABLE sessions
+        ADD COLUMN title TEXT;
+      ALTER TABLE sessions
+        ADD COLUMN updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'));
+      ALTER TABLE sessions
+        ADD COLUMN ended_at TEXT;
+      ALTER TABLE sessions
+        ADD COLUMN deleted_at TEXT;
+
+      CREATE INDEX IF NOT EXISTS idx_sessions_user_id_updated_at
+        ON sessions (user_id, updated_at);
+
+      -- A live-data capture run. adapter_kind is stored per recording, not
+      -- derived at read time, so a simulated run can never later be displayed
+      -- as if it had come off a real ECU.
+      CREATE TABLE IF NOT EXISTS recordings (
+        id            TEXT PRIMARY KEY,
+        user_id       INTEGER NOT NULL,
+        vehicle_id    TEXT REFERENCES vehicles(id),
+        session_id    TEXT REFERENCES sessions(id),
+        label         TEXT,
+        adapter_kind  TEXT NOT NULL,
+        started_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+        ended_at      TEXT,
+        sample_count  INTEGER NOT NULL DEFAULT 0,
+        deleted_at    TEXT
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_recordings_user_id_started_at
+        ON recordings (user_id, started_at);
+
+      CREATE TABLE IF NOT EXISTS recording_samples (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT,
+        recording_id  TEXT NOT NULL REFERENCES recordings(id) ON DELETE CASCADE,
+        ts            TEXT NOT NULL,
+        metric        TEXT NOT NULL,
+        value         REAL NOT NULL,
+        unit          TEXT NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_recording_samples_recording_id_ts
+        ON recording_samples (recording_id, ts);
+    `);
+  },
 ];
 
 export async function runMigrations(db: SQLiteDatabase): Promise<void> {

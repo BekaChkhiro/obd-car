@@ -1,5 +1,6 @@
 import { View, Text } from 'react-native';
 import type { TimePoint } from '@/src/store/dashboard';
+import { colors } from '@/src/theme/colors';
 
 const MAX_BARS = 50;
 const CHART_HEIGHT = 56;
@@ -20,7 +21,7 @@ export function PidChart({
   min,
   max,
   unit,
-  color = '#22d3ee',
+  color = colors.accent,
   className = '',
 }: PidChartProps) {
   const bars = data.length > MAX_BARS ? data.slice(data.length - MAX_BARS) : data;
@@ -28,13 +29,13 @@ export function PidChart({
   const latest = bars[bars.length - 1]?.value;
 
   return (
-    <View className={`rounded-2xl border border-zinc-800 bg-zinc-900/60 p-3 ${className}`}>
+    <View className={`rounded-2xl border border-border bg-surface p-3 ${className}`}>
       <View className="flex-row items-center justify-between">
-        <Text className="text-[10px] font-bold tracking-[2px] text-zinc-500">
+        <Text className="text-[10px] font-bold tracking-[2px] text-text-muted">
           {label.toUpperCase()}
         </Text>
         {latest !== undefined && (
-          <Text className="text-[10px] tabular-nums text-zinc-400">
+          <Text className="text-[10px] tabular-nums text-text-muted">
             {latest.toFixed(latest < 100 ? 1 : 0)} {unit}
           </Text>
         )}
@@ -42,7 +43,7 @@ export function PidChart({
 
       {bars.length === 0 ? (
         <View style={{ height: CHART_HEIGHT }} className="mt-2 items-center justify-center">
-          <Text className="text-[10px] text-zinc-700">No data yet</Text>
+          <Text className="text-[10px] text-text-dim">No data yet</Text>
         </View>
       ) : (
         <View className="mt-2 flex-row items-end" style={{ height: CHART_HEIGHT, gap: 1 }}>
@@ -66,10 +67,10 @@ export function PidChart({
       )}
 
       <View className="mt-1.5 flex-row justify-between">
-        <Text className="text-[10px] text-zinc-700 tabular-nums">
+        <Text className="text-[10px] text-text-dim tabular-nums">
           {min} {unit}
         </Text>
-        <Text className="text-[10px] text-zinc-700 tabular-nums">
+        <Text className="text-[10px] text-text-dim tabular-nums">
           {max} {unit}
         </Text>
       </View>

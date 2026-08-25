@@ -1,4 +1,9 @@
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useLayoutEffect, useState } from 'react';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { Feather } from '@expo/vector-icons';
+import { ScanRadar } from '@/src/components/ScanRadar';
+import { AdapterHelpSheet } from '@/src/components/AdapterHelpSheet';
+import { looksLikeObdAdapter, rankScannedDevices } from '@/src/ble/adapter-names';
 import {
   View,
   Text,
@@ -10,13 +15,14 @@ import {
   ActivityIndicator,
   TextInput,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useNavigation, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { State } from 'react-native-ble-plx';
 import { bleManager, createWifiElm327Client, createClassicElm327Client } from '@/src/ble/manager';
 import { getPairedClassicDevices } from '@/src/ble/elm327';
 import { connectionMachine } from '@/src/ble/connection';
 import { createMockAdapter } from '@/src/ble/mock-adapter';
+import { isE2E } from '@/src/lib/e2e';
 import { useBleStore, type ScannedDevice } from '@/src/store/ble';
 import { colors } from '@/src/theme/colors';
 
@@ -40,11 +46,11 @@ async function requestAndroidBlePermissions(): Promise<boolean> {
 }
 
 function rssiBars(rssi: number | null): { bars: number; label: string; tone: string } {
-  if (rssi === null) return { bars: 0, label: '—', tone: 'text-zinc-600' };
-  if (rssi >= -60) return { bars: 4, label: 'strong', tone: 'text-emerald-400' };
-  if (rssi >= -75) return { bars: 3, label: 'good', tone: 'text-cyan-400' };
-  if (rssi >= -90) return { bars: 2, label: 'weak', tone: 'text-amber-400' };
-  return { bars: 1, label: 'poor', tone: 'text-red-400' };
+  if (rssi === null) return { bars: 0, label: '—', tone: 'text-text-dim' };
+  if (rssi >= -60) return { bars: 4, label: 'strong', tone: 'text-success' };
+  if (rssi >= -75) return { bars: 3, label: 'good', tone: 'text-accent' };
+  if (rssi >= -90) return { bars: 2, label: 'weak', tone: 'text-warning' };
+  return { bars: 1, label: 'poor', tone: 'text-danger' };
 }
 
 function SignalBars({ rssi }: { rssi: number | null }) {
@@ -54,7 +60,7 @@ function SignalBars({ rssi }: { rssi: number | null }) {
       {[1, 2, 3, 4].map((i) => (
         <View
           key={i}
-          className={`w-1 rounded-sm ${i <= bars ? tone.replace('text-', 'bg-') : 'bg-zinc-800'}`}
+          className={`w-1 rounded-sm ${i <= bars ? tone.replace('text-', 'bg-') : 'bg-surface-muted'}`}
           style={{ height: 4 + i * 2 }}
         />
       ))}
@@ -88,16 +94,28 @@ function DeviceRow({
       accessibilityRole="button"
       accessibilityLabel={`${deviceName}, ${device.rssi ?? '—'} dBm, ${sig.label}`}
       accessibilityState={{ selected: isConnected, disabled: isOtherBusy }}
-      className={`mx-4 mb-2 rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3 ${
-        isOtherBusy ? 'opacity-40' : 'active:bg-zinc-900'
+      className={`mx-4 mb-2 rounded-xl border border-border bg-surface px-4 py-3 ${
+        isOtherBusy ? 'opacity-40' : 'active:bg-surface'
       }`}
     >
       <View className="flex-row items-center justify-between">
         <View className="flex-1 mr-3">
-          <Text className="text-sm font-semibold text-zinc-50" numberOfLines={1}>
-            {deviceName}
-          </Text>
-          <Text className="mt-0.5 text-[11px] text-zinc-500" numberOfLines={1}>
+          <View className="flex-row items-center gap-2">
+            <Text
+              className="shrink text-sm font-semibold text-text-primary"
+              numberOfLines={1}
+            >
+              {deviceName}
+            </Text>
+            {looksLikeObdAdapter(device.name) && (
+              <View className="shrink-0 rounded-md bg-success-soft px-1.5 py-0.5">
+                <Text className="text-[9px] font-bold tracking-wider text-success">
+                  {t('pair.likelyAdapter')}
+                </Text>
+              </View>
+            )}
+          </View>
+          <Text className="mt-0.5 text-[11px] text-text-muted" numberOfLines={1}>
             {device.id}
           </Text>
           <View className="mt-1.5 flex-row items-center gap-2">
@@ -110,12 +128,12 @@ function DeviceRow({
         <View
           className={`rounded-lg px-3 py-2 ${
             isConnected
-              ? 'bg-emerald-500/10 border border-emerald-500/30'
+              ? 'bg-success-soft border border-success/30'
               : isConnecting
-                ? 'bg-amber-500/10 border border-amber-500/30'
+                ? 'bg-warning-soft border border-warning/30'
                 : isOtherBusy
-                  ? 'border border-zinc-800 bg-zinc-900'
-                  : 'bg-cyan-500'
+                  ? 'border border-border bg-surface'
+                  : 'bg-accent'
           }`}
         >
           {isConnecting ? (
@@ -124,10 +142,10 @@ function DeviceRow({
             <Text
               className={`text-[11px] font-semibold tracking-wider ${
                 isConnected
-                  ? 'text-emerald-300'
+                  ? 'text-success'
                   : isOtherBusy
-                    ? 'text-zinc-600'
-                    : 'text-zinc-950'
+                    ? 'text-text-dim'
+                    : 'text-on-accent'
               }`}
             >
               {isConnected ? t('pair.connectedBadge') : t('pair.connectBadge')}
@@ -159,14 +177,14 @@ function TabButton({ label, hint, active, onPress }: TabButtonProps) {
     >
       <Text
         className={`text-[11px] font-bold tracking-wider ${
-          active ? 'text-accent' : 'text-zinc-400'
+          active ? 'text-accent' : 'text-text-muted'
         }`}
       >
         {label}
       </Text>
       <Text
         className={`mt-0.5 text-[10px] ${
-          active ? 'text-zinc-400' : 'text-zinc-600'
+          active ? 'text-text-muted' : 'text-text-dim'
         }`}
       >
         {hint}
@@ -176,6 +194,11 @@ function TabButton({ label, hint, active, onPress }: TabButtonProps) {
 }
 
 export default function PairScreen() {
+  // Ask the navigator how tall its bar actually is rather than hard-coding
+  // a guess — the floating bar's height moves with the device's safe area.
+  const tabBarHeight = useBottomTabBarHeight();
+  const [helpOpen, setHelpOpen] = useState(false);
+  const navigation = useNavigation();
   const router = useRouter();
   const { connectionPhase, connectionError, retryCount, permissionGranted, devices, connectedDeviceId } =
     useBleStore();
@@ -183,6 +206,33 @@ export default function PairScreen() {
   const { t } = useTranslation();
 
   const [tab, setTab] = useState<TransportTab>('ble');
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <Pressable
+          onPress={() => setHelpOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel={t('pair.helpTitle')}
+          hitSlop={12}
+          // Explicit box and centring rather than utility classes: inside
+          // headerRight the navigator supplies its own alignment, and the
+          // icon ended up sitting off-centre in its circle.
+          style={{
+            width: 34,
+            height: 34,
+            borderRadius: 17,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: colors.surface,
+          }}
+        >
+          <Feather name="help-circle" size={18} color={colors.textPrimary} />
+        </Pressable>
+      ),
+    });
+  }, [navigation, t]);
+
   // Tracks the device the user explicitly tapped so the spinner only renders
   // on that row — without this, every other device shows "Connecting…" while
   // one is being attempted.
@@ -191,9 +241,18 @@ export default function PairScreen() {
   const isScanning = connectionPhase === 'scanning';
   const isConnecting = connectionPhase === 'connecting';
 
-  const startScan = useCallback(() => {
+  const handleScanPress = useCallback(async () => {
+    if (!permissionGranted) {
+      Alert.alert(t('pair.errPermTitle'), t('pair.errPermBody'));
+      return;
+    }
+    const state = await bleManager.state();
+    if (state !== State.PoweredOn) {
+      Alert.alert(t('pair.errBtOffTitle'), t('pair.errBtOffBody'));
+      return;
+    }
     connectionMachine.startScan();
-  }, []);
+  }, [permissionGranted, t]);
 
   const stopScan = useCallback(() => {
     connectionMachine.stopScan();
@@ -214,27 +273,15 @@ export default function PairScreen() {
   }, [setPermissionGranted, t]);
 
   useEffect(() => {
-    if (tab !== 'ble') {
-      stopScan();
-      return;
-    }
-    if (!permissionGranted) return;
-    (async () => {
-      const state = await bleManager.state();
-      if (state !== State.PoweredOn) {
-        Alert.alert(t('pair.errBtOffTitle'), t('pair.errBtOffBody'));
-        return;
-      }
-      startScan();
-    })();
-  }, [tab, permissionGranted, startScan, stopScan, t]);
+    if (tab !== 'ble') stopScan();
+  }, [tab, stopScan]);
 
   async function handleConnect(deviceId: string) {
     stopScan();
     setPendingDeviceId(deviceId);
     try {
       await connectionMachine.connect(deviceId);
-      router.replace('/(app)/dashboard');
+      router.replace('/dashboard');
     } catch {
       // connectionMachine updates the store; error message is in connectionError
     } finally {
@@ -247,7 +294,7 @@ export default function PairScreen() {
     try {
       const adapter = await createMockAdapter();
       connectionMachine.injectAdapter(adapter, 'mock-adapter');
-      router.replace('/(app)/dashboard');
+      router.replace('/dashboard');
     } catch (err) {
       Alert.alert(t('pair.errMock'), err instanceof Error ? err.message : String(err));
     }
@@ -280,8 +327,8 @@ export default function PairScreen() {
     setClassicConnecting(true);
     try {
       const adapter = await createClassicElm327Client({ address });
-      connectionMachine.injectAdapter(adapter, `classic:${address}`);
-      router.replace('/(app)/dashboard');
+      connectionMachine.injectAdapter(adapter, `classic:${address}`, 'real');
+      router.replace('/dashboard');
     } catch (err) {
       Alert.alert(t('pair.errClassic'), err instanceof Error ? err.message : String(err));
     } finally {
@@ -307,8 +354,8 @@ export default function PairScreen() {
       const adapter = await createWifiElm327Client({
         config: { host: wifiHost, port: portNum },
       });
-      connectionMachine.injectAdapter(adapter, `wifi:${wifiHost}:${portNum}`);
-      router.replace('/(app)/dashboard');
+      connectionMachine.injectAdapter(adapter, `wifi:${wifiHost}:${portNum}`, 'real');
+      router.replace('/dashboard');
     } catch (err) {
       Alert.alert(t('pair.errWifi'), err instanceof Error ? err.message : String(err));
     } finally {
@@ -324,85 +371,138 @@ export default function PairScreen() {
 
   // Only surface named adapters — unnamed entries are usually phones, beacons,
   // or accessory peripherals that the user can't connect to anyway.
-  const namedDevices = devices.filter(
-    (d) => typeof d.name === 'string' && d.name.trim().length > 0,
+  const namedDevices = rankScannedDevices(
+    devices.filter((d) => typeof d.name === 'string' && d.name.trim().length > 0),
   );
+  const likelyAdapters = namedDevices.filter((d) => looksLikeObdAdapter(d.name)).length;
 
   const statusLine = isScanning
-    ? { dot: 'bg-cyan-400', tone: 'text-cyan-300', text: t('pair.scanningBle') }
+    ? { dot: 'bg-accent', tone: 'text-accent', text: t('pair.scanningBle') }
     : isConnecting
-      ? { dot: 'bg-amber-400', tone: 'text-amber-300', text: t('pair.connectingProbing') }
+      ? { dot: 'bg-warning', tone: 'text-warning', text: t('pair.connectingProbing') }
       : connectionPhase === 'error' && retryCount > 0
         ? { dot: 'bg-orange-400', tone: 'text-orange-300', text: t('pair.reconnectingAttempt', { count: retryCount }) }
-        : { dot: 'bg-zinc-600', tone: 'text-zinc-400', text: t('pair.devicesFound', { count: namedDevices.length }) };
+        : {
+            dot: 'bg-surface-sunken',
+            tone: 'text-text-muted',
+            text:
+              likelyAdapters > 0
+                ? t('pair.adaptersFound', {
+                    count: likelyAdapters,
+                    total: namedDevices.length,
+                  })
+                : t('pair.devicesFound', { count: namedDevices.length }),
+          };
 
   return (
-    <View className="flex-1 bg-bg">
-      <View className="px-5 pt-4 pb-3">
-        <Text className="text-[10px] font-bold tracking-[3px] text-zinc-500">
-          {t('pair.brand')}
-        </Text>
-        <Text className="mt-1 text-2xl font-bold text-zinc-50">{t('pair.header')}</Text>
-        <Text className="mt-1 text-xs text-zinc-500">
-          {t('pair.intro')}
-        </Text>
-      </View>
+    <View className="flex-1">
+      <AdapterHelpSheet visible={helpOpen} onClose={() => setHelpOpen(false)} />
 
-      <View className="mx-5 mb-3 flex-row gap-1 rounded-xl border border-zinc-800 bg-zinc-900/60 p-1">
+      <View className="mx-5 mb-3 mt-3 flex-row gap-1 rounded-xl border border-border bg-surface p-1">
         <TabButton label="BLE" hint="HM-10 clones" active={tab === 'ble'} onPress={() => setTab('ble')} />
-        <TabButton
-          label="BT CLASSIC"
-          hint="HC-05 clones"
-          active={tab === 'classic'}
-          onPress={() => setTab('classic')}
-        />
+        {Platform.OS === 'android' && (
+          <TabButton
+            label="BT CLASSIC"
+            hint="HC-05 clones"
+            active={tab === 'classic'}
+            onPress={() => setTab('classic')}
+          />
+        )}
         <TabButton label="WIFI" hint="ESP8266" active={tab === 'wifi'} onPress={() => setTab('wifi')} />
       </View>
 
+      {/* Simulated adapter — E2E builds only. In a shipped app this would feed
+          generated numbers to the dashboard and, worse, to the AI assistant,
+          which has no way to tell them apart from real ECU readings. */}
+      {isE2E() && (
       <Pressable
         testID="connect-mock-adapter"
         onPress={handleConnectMock}
-        className="mx-5 mb-4 flex-row items-center justify-between rounded-xl border border-violet-500/30 bg-violet-500/10 px-4 py-3 active:bg-violet-500/20"
+        className="mx-5 mb-4 flex-row items-center justify-between rounded-xl border border-info/30 bg-info-soft px-4 py-3 active:bg-info-soft"
       >
-        <View>
-          <Text className="text-xs font-semibold text-violet-200">{t('pair.demoMode')}</Text>
-          <Text className="mt-0.5 text-[11px] text-violet-300/70">
+        <View className="mr-3 flex-1">
+          <Text className="text-xs font-semibold text-info">{t('pair.demoMode')}</Text>
+          <Text className="mt-0.5 text-[11px] leading-4 text-text-secondary">
             {t('pair.demoModeHint')}
           </Text>
         </View>
-        <Text className="text-xs font-semibold text-violet-300">{t('pair.run')}</Text>
+        <Text className="shrink-0 text-xs font-semibold text-info">{t('pair.run')}</Text>
       </Pressable>
+      )}
 
       {tab === 'ble' && (
         <>
-          <View className="mx-5 mb-3 flex-row items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/50 px-4 py-3">
-            <View className="flex-row items-center gap-3">
-              <View className={`h-2 w-2 rounded-full ${statusLine.dot}`} />
-              <View>
-                <Text className={`text-xs font-medium ${statusLine.tone}`}>{statusLine.text}</Text>
-                {!permissionGranted && Platform.OS === 'android' && (
-                  <Text className="mt-0.5 text-[10px] text-red-400">
-                    {t('pair.permissionDenied')}
-                  </Text>
-                )}
-              </View>
-            </View>
-            <Pressable
-              onPress={isScanning ? stopScan : () => startScan()}
-              disabled={isConnecting}
-              className={`rounded-lg px-3 py-2 ${
-                isScanning ? 'bg-zinc-800' : isConnecting ? 'bg-zinc-900' : 'bg-cyan-500'
+          <View className="mb-5 items-center">
+            <ScanRadar
+              scanning={isScanning}
+              found={namedDevices.length}
+              caption={isScanning ? t('pair.scanningHint') : undefined}
+            />
+          </View>
+
+          {/* One decision, one control. The old row put a status sentence and a
+              small button side by side, which made the primary action on this
+              screen the smallest thing on it. */}
+          <Pressable
+            onPress={isScanning ? stopScan : handleScanPress}
+            disabled={isConnecting}
+            accessibilityRole="button"
+            accessibilityLabel={isScanning ? t('pair.stop') : t('pair.scan')}
+            accessibilityState={{ disabled: isConnecting, busy: isScanning }}
+            style={
+              isConnecting
+                ? undefined
+                : {
+                    shadowColor: colors.accent,
+                    shadowOpacity: isScanning ? 0.08 : 0.22,
+                    shadowRadius: 14,
+                    shadowOffset: { width: 0, height: 6 },
+                    elevation: 6,
+                  }
+            }
+            className={`mb-3 flex-row items-center justify-center gap-2.5 self-center rounded-full py-3.5 pl-6 pr-7 ${
+              isConnecting
+                ? 'bg-surface-muted'
+                : isScanning
+                  ? 'border border-border bg-surface active:bg-surface-muted'
+                  : 'bg-accent active:bg-accent-strong'
+            }`}
+          >
+            <Feather
+              name={isScanning ? 'x' : 'bluetooth'}
+              size={17}
+              color={
+                isConnecting
+                  ? colors.textDim
+                  : isScanning
+                    ? colors.textPrimary
+                    : colors.onAccent
+              }
+            />
+            <Text
+              className={`text-[15px] font-bold tracking-wider ${
+                isConnecting
+                  ? 'text-text-dim'
+                  : isScanning
+                    ? 'text-text-primary'
+                    : 'text-on-accent'
               }`}
             >
-              <Text
-                className={`text-[11px] font-bold tracking-wider ${
-                  isScanning ? 'text-zinc-300' : isConnecting ? 'text-zinc-600' : 'text-zinc-950'
-                }`}
-              >
-                {isScanning ? t('pair.stop') : t('pair.scan')}
-              </Text>
-            </Pressable>
+              {isScanning ? t('pair.stop') : t('pair.scan')}
+            </Text>
+          </Pressable>
+
+          {/* The status keeps its own line under the button — it is a result,
+              not a label on the control. */}
+          <View className="mb-3 flex-row items-center justify-center gap-2">
+            <View className={`h-1.5 w-1.5 rounded-full ${statusLine.dot}`} />
+            <Text className={`text-[11px] ${statusLine.tone}`}>{statusLine.text}</Text>
           </View>
+          {!permissionGranted && Platform.OS === 'android' && (
+            <Text className="mb-3 text-center text-[10px] text-danger">
+              {t('pair.permissionDenied')}
+            </Text>
+          )}
 
           <FlatList
             data={namedDevices}
@@ -421,43 +521,43 @@ export default function PairScreen() {
             ListEmptyComponent={
               !isScanning && !isConnecting ? (
                 <View className="mt-12 items-center px-10">
-                  <Text className="text-center text-sm text-zinc-400">
+                  <Text className="text-center text-sm text-text-muted">
                     {t('pair.noBleFound')}
                   </Text>
-                  <Text className="mt-2 text-center text-xs text-zinc-600">
+                  <Text className="mt-2 text-center text-xs text-text-dim">
                     {t('pair.noBleHint')}
                   </Text>
                 </View>
               ) : null
             }
-            contentContainerStyle={{ paddingBottom: 32 }}
+            contentContainerStyle={{ paddingBottom: 32 + tabBarHeight }}
           />
         </>
       )}
 
       {tab === 'classic' && (
-        <View className="mx-5 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4">
+        <View className="mx-5 rounded-2xl border border-border bg-surface p-4">
           <View className="mb-3 flex-row items-center justify-between">
-            <Text className="text-[10px] font-bold tracking-[2px] text-zinc-500">
+            <Text className="text-[10px] font-bold tracking-[2px] text-text-muted">
               {t('pair.pairedAdapters')}
             </Text>
-            <Pressable onPress={loadClassicDevices} className="rounded-md bg-zinc-800 px-2 py-1">
-              <Text className="text-[10px] font-semibold text-zinc-300">{t('pair.refresh')}</Text>
+            <Pressable onPress={loadClassicDevices} className="rounded-md bg-surface-muted px-2 py-1">
+              <Text className="text-[10px] font-semibold text-text-secondary">{t('pair.refresh')}</Text>
             </Pressable>
           </View>
 
           {Platform.OS !== 'android' ? (
-            <Text className="text-xs text-zinc-500">
+            <Text className="text-xs text-text-muted">
               {t('pair.classicIosNote')}
             </Text>
           ) : (
             <>
-              <Text className="mb-4 text-xs text-zinc-500">
+              <Text className="mb-4 text-xs text-text-muted">
                 {t('pair.pairFirst')}
               </Text>
               {classicDevices.length === 0 ? (
                 <View className="items-center py-6">
-                  <Text className="text-xs text-zinc-600">{t('pair.noPaired')}</Text>
+                  <Text className="text-xs text-text-dim">{t('pair.noPaired')}</Text>
                 </View>
               ) : (
                 classicDevices.map((d) => (
@@ -467,15 +567,15 @@ export default function PairScreen() {
                     disabled={classicConnecting}
                     className={`mb-2 flex-row items-center justify-between rounded-xl border px-4 py-3 ${
                       classicConnecting
-                        ? 'border-zinc-800 bg-zinc-900'
-                        : 'border-indigo-500/30 bg-indigo-500/10 active:bg-indigo-500/20'
+                        ? 'border-border bg-surface'
+                        : 'border-info/30 bg-info-soft active:bg-info-soft'
                     }`}
                   >
                     <View>
-                      <Text className="text-sm font-semibold text-zinc-50">{d.name}</Text>
-                      <Text className="mt-0.5 text-[11px] text-zinc-500">{d.address}</Text>
+                      <Text className="text-sm font-semibold text-text-primary">{d.name}</Text>
+                      <Text className="mt-0.5 text-[11px] text-text-muted">{d.address}</Text>
                     </View>
-                    <Text className="text-[11px] font-bold tracking-wider text-indigo-300">
+                    <Text className="text-[11px] font-bold tracking-wider text-info">
                       {t('pair.connectArrow')}
                     </Text>
                   </Pressable>
@@ -483,8 +583,8 @@ export default function PairScreen() {
               )}
               {classicConnecting && (
                 <View className="mt-2 flex-row items-center gap-2">
-                  <ActivityIndicator size="small" color="#a5b4fc" />
-                  <Text className="text-xs text-indigo-300">{t('pair.initializing')}</Text>
+                  <ActivityIndicator size="small" color={colors.info} />
+                  <Text className="text-xs text-info">{t('pair.initializing')}</Text>
                 </View>
               )}
             </>
@@ -493,17 +593,17 @@ export default function PairScreen() {
       )}
 
       {tab === 'wifi' && (
-        <View className="mx-5 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4">
-          <Text className="text-[10px] font-bold tracking-[2px] text-zinc-500">
+        <View className="mx-5 rounded-2xl border border-border bg-surface p-4">
+          <Text className="text-[10px] font-bold tracking-[2px] text-text-muted">
             {t('pair.wifiAdapter')}
           </Text>
-          <Text className="mt-2 text-xs text-zinc-500">
+          <Text className="mt-2 text-xs text-text-muted">
             {t('pair.wifiHint')}
           </Text>
 
           <View className="mt-4 flex-row gap-2">
-            <View className="flex-1 rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2">
-              <Text className="text-[9px] font-bold tracking-widest text-zinc-600">{t('pair.host')}</Text>
+            <View className="flex-1 rounded-xl border border-border bg-surface px-3 py-2">
+              <Text className="text-[9px] font-bold tracking-widest text-text-dim">{t('pair.host')}</Text>
               <TextInput
                 value={wifiHost}
                 onChangeText={setWifiHost}
@@ -513,11 +613,11 @@ export default function PairScreen() {
                 keyboardType="numbers-and-punctuation"
                 autoCapitalize="none"
                 autoCorrect={false}
-                className="mt-0.5 text-sm text-zinc-50"
+                className="mt-0.5 text-sm text-text-primary"
               />
             </View>
-            <View className="w-24 rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2">
-              <Text className="text-[9px] font-bold tracking-widest text-zinc-600">{t('pair.port')}</Text>
+            <View className="w-24 rounded-xl border border-border bg-surface px-3 py-2">
+              <Text className="text-[9px] font-bold tracking-widest text-text-dim">{t('pair.port')}</Text>
               <TextInput
                 value={wifiPort}
                 onChangeText={setWifiPort}
@@ -525,7 +625,7 @@ export default function PairScreen() {
                 placeholderTextColor={colors.textDim}
                 accessibilityLabel={t('pair.port')}
                 keyboardType="number-pad"
-                className="mt-0.5 text-sm text-zinc-50"
+                className="mt-0.5 text-sm text-text-primary"
               />
             </View>
           </View>
@@ -534,13 +634,13 @@ export default function PairScreen() {
             onPress={handleConnectWifi}
             disabled={wifiConnecting}
             className={`mt-4 items-center rounded-xl py-3 ${
-              wifiConnecting ? 'bg-zinc-800' : 'bg-emerald-500 active:bg-emerald-600'
+              wifiConnecting ? 'bg-surface-muted' : 'bg-success active:bg-success'
             }`}
           >
             {wifiConnecting ? (
               <ActivityIndicator color={colors.textPrimary} />
             ) : (
-              <Text className="text-sm font-bold tracking-wider text-zinc-950">
+              <Text className="text-sm font-bold tracking-wider text-on-accent">
                 {t('pair.connectWifi')}
               </Text>
             )}

@@ -133,7 +133,6 @@ async function applyPull(
       user_id: userId,
       vehicle_id: s.vehicle_id,
       created_at: s.created_at,
-      sync_status: 'synced',
       server_id: SYNCED_SENTINEL,
     });
   }

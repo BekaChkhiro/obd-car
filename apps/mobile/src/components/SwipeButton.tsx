@@ -192,10 +192,10 @@ export function SwipeButton({
     setTrackWidth(e.nativeEvent.layout.width);
   };
 
-  const accent = tone === 'cyan' ? colors.accent : '#3f3f46';
-  const accentDeep = tone === 'cyan' ? colors.accentDim : '#27272a';
-  const fillTint = tone === 'cyan' ? 'rgba(34, 211, 238, 0.14)' : 'rgba(82, 82, 91, 0.22)';
-  const fillTintBright = tone === 'cyan' ? 'rgba(34, 211, 238, 0.22)' : 'rgba(113, 113, 122, 0.28)';
+  const accent = tone === 'cyan' ? colors.accent : colors.textSecondary;
+  const accentDeep = tone === 'cyan' ? colors.accentStrong : colors.textPrimary;
+  const fillTint = tone === 'cyan' ? 'rgba(20, 22, 43, 0.10)' : 'rgba(74, 80, 100, 0.10)';
+  const fillTintBright = tone === 'cyan' ? 'rgba(20, 22, 43, 0.18)' : 'rgba(74, 80, 100, 0.18)';
 
   return (
     <View
@@ -209,9 +209,9 @@ export function SwipeButton({
       style={{
         height: HEIGHT,
         borderRadius: HEIGHT / 2,
-        backgroundColor: '#0d0d11',
+        backgroundColor: colors.surfaceSunken,
         borderWidth: 1,
-        borderColor: '#1f1f25',
+        borderColor: colors.border,
         overflow: 'hidden',
         justifyContent: 'center',
         padding: TRACK_PADDING,
@@ -342,7 +342,7 @@ export function SwipeButton({
                 bottom: 3,
                 borderRadius: (THUMB_SIZE - 6) / 2,
                 borderWidth: 1,
-                borderColor: '#ffffff',
+                borderColor: colors.onAccent,
               },
               thumbInnerHighlight,
             ]}

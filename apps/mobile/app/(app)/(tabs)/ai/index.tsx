@@ -7,32 +7,36 @@ import {
   Platform,
   Pressable,
   Text,
-  TextInput,
   View,
   type ListRenderItemInfo,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { colors } from '@/src/theme/colors';
 import { useTranslation } from 'react-i18next';
+import { useNavigation } from 'expo-router';
+import { useTabHistory } from '@/src/store/tab-history';
 import { useChatStore } from '@/src/store/chat';
 import { useBleStore } from '@/src/store/ble';
 import { useLocaleStore } from '@/src/store/locale';
-import { getAccessToken } from '@/src/lib/api';
 import { connectionMachine } from '@/src/ble/connection';
 import { isE2E } from '@/src/lib/e2e';
 import { MarkdownText } from '@/src/components/MarkdownText';
 import { PidWidget } from '@/src/components/PidWidget';
 import { ToolCallBadge } from '@/src/components/ToolCallBadge';
+import { AssistantHelpSheet } from '@/src/components/AssistantHelpSheet';
+import { NoAdapterState } from '@/src/components/NoAdapterState';
 import { WriteConfirmModal } from '@/src/components/WriteConfirmModal';
 import { useToolExecutor } from '@/src/hooks/useToolExecutor';
+import { useAdapterStatusSync } from '@/src/hooks/useAdapterStatusSync';
+import { useChatSession } from '@/src/hooks/useChatSession';
+import { useSQLiteContext } from 'expo-sqlite';
 import type { ChatMessage } from '@/src/types/chat';
 
-const MAX_CHARS = 1000;
-const CHAR_COUNT_THRESHOLD = 800;
 // Group consecutive messages from the same role if sent within this window.
 const GROUP_WINDOW_MS = 120_000;
 
@@ -61,7 +65,7 @@ function StreamingDots() {
       {anims.map((anim, i) => (
         <Animated.View
           key={i}
-          className="h-2 w-2 rounded-full bg-cyan-400"
+          className="h-2 w-2 rounded-full bg-accent"
           style={{ opacity: anim }}
         />
       ))}
@@ -69,25 +73,6 @@ function StreamingDots() {
   );
 }
 
-function StreamingCursor() {
-  const blink = useRef(new Animated.Value(1)).current;
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(blink, { toValue: 0.2, duration: 450, useNativeDriver: true }),
-        Animated.timing(blink, { toValue: 1, duration: 450, useNativeDriver: true }),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [blink]);
-  return (
-    <Animated.View
-      className="ml-0.5 h-3.5 w-[2px] bg-cyan-400"
-      style={{ opacity: blink, transform: [{ translateY: 1 }] }}
-    />
-  );
-}
 
 // ── Message bubble ───────────────────────────────────────────────────────────
 
@@ -107,13 +92,13 @@ function MessageBubble({ msg, isFirstInGroup, isLastInGroup }: MessageBubbleProp
   if (isUser) {
     return (
       <View className={`${isLastInGroup ? 'mb-4' : 'mb-1'} items-end px-4`}>
-        <View className="max-w-[82%] rounded-2xl rounded-tr-md bg-cyan-500 px-3.5 py-2">
-          <Text selectable className="text-[15px] leading-[20px] text-zinc-950">
+        <View className="max-w-[82%] rounded-2xl rounded-tr-md bg-accent px-3.5 py-2">
+          <Text selectable className="text-[15px] leading-[20px] text-on-accent">
             {msg.content}
           </Text>
         </View>
         {isLastInGroup && (
-          <Text className="mr-1 mt-1 text-[10px] tabular-nums text-zinc-600">{time}</Text>
+          <Text className="mr-1 mt-1 text-[10px] tabular-nums text-text-dim">{time}</Text>
         )}
       </View>
     );
@@ -124,11 +109,11 @@ function MessageBubble({ msg, isFirstInGroup, isLastInGroup }: MessageBubbleProp
       <View className="max-w-[82%]">
         {isFirstInGroup && (
           <View className="mb-0.5 ml-2 flex-row items-center gap-1">
-            <View className="h-1 w-1 rounded-full bg-cyan-400" />
-            <Text className="text-[9px] font-bold tracking-[2px] text-zinc-500">AI</Text>
+            <View className="h-1 w-1 rounded-full bg-accent" />
+            <Text className="text-[9px] font-bold tracking-[2px] text-text-muted">AI</Text>
           </View>
         )}
-        <View className="rounded-2xl rounded-tl-md bg-zinc-900 px-3.5 py-2">
+        <View className="rounded-2xl rounded-tl-md bg-surface px-3.5 py-2">
           {msg.isStreaming && msg.content === '' ? (
             <StreamingDots />
           ) : (
@@ -165,7 +150,7 @@ function MessageBubble({ msg, isFirstInGroup, isLastInGroup }: MessageBubbleProp
         )}
 
         {isLastInGroup && (
-          <Text className="ml-2 mt-1 text-[10px] tabular-nums text-zinc-600">{time}</Text>
+          <Text className="ml-2 mt-1 text-[10px] tabular-nums text-text-dim">{time}</Text>
         )}
       </View>
     </View>
@@ -184,10 +169,23 @@ function PromptCard({ category, prompt, onPress }: PromptCardProps) {
   return (
     <Pressable
       onPress={onPress}
-      className="rounded-2xl border border-zinc-800 bg-zinc-900/50 px-4 py-3 active:border-cyan-500/40 active:bg-zinc-900"
+      accessibilityRole="button"
+      accessibilityLabel={`${category}: ${prompt}`}
+      className="flex-row items-center gap-3 rounded-2xl border border-border bg-surface px-4 py-3.5 active:bg-surface-muted"
     >
-      <Text className="text-[9px] font-bold tracking-[2px] text-cyan-400">{category}</Text>
-      <Text className="mt-1.5 text-[15px] leading-5 text-zinc-200">{prompt}</Text>
+      <View className="flex-1">
+        {/* The category is a label on the question, not a heading of its own —
+            it sits in a chip so it stops competing with the question's weight. */}
+        <View className="self-start rounded-md bg-accent-soft px-1.5 py-0.5">
+          <Text className="text-[9px] font-bold tracking-[1.5px] text-text-secondary">
+            {category}
+          </Text>
+        </View>
+        <Text className="mt-2 text-[15px] leading-5 text-text-primary">{prompt}</Text>
+      </View>
+      {/* Without this the cards read as text blocks; the chevron is what says
+          they can be tapped. */}
+      <Feather name="chevron-right" size={16} color={colors.textDim} />
     </Pressable>
   );
 }
@@ -203,14 +201,14 @@ function EmptyChat({ onSend }: { onSend: (text: string) => void }) {
   return (
     <View className="flex-1 px-5 pt-8">
       <View className="mb-8">
-        <View className="mb-3 h-12 w-12 items-center justify-center rounded-2xl border border-cyan-500/30 bg-cyan-500/10">
-          <Text className="text-[10px] font-bold tracking-[2px] text-cyan-400">AI</Text>
+        <View className="mb-4 h-14 w-14 items-center justify-center rounded-2xl bg-accent">
+          <Feather name="zap" size={22} color={colors.onAccent} />
         </View>
-        <Text className="text-2xl font-bold text-zinc-50">{t('chat.title')}</Text>
-        <Text className="mt-1.5 text-sm leading-5 text-zinc-500">{t('chat.subtitle')}</Text>
+        <Text className="text-2xl font-bold text-text-primary">{t('chat.title')}</Text>
+        <Text className="mt-1.5 text-sm leading-5 text-text-muted">{t('chat.subtitle')}</Text>
       </View>
 
-      <Text className="mb-3 text-[10px] font-bold tracking-[2px] text-zinc-500">
+      <Text className="mb-3 text-[10px] font-bold tracking-[2px] text-text-muted">
         {t('chat.suggestedQuestions')}
       </Text>
       <View className="gap-2.5">
@@ -233,11 +231,13 @@ function ConnectionPill({ status }: { status: string }) {
   const { t } = useTranslation();
   if (status === 'connected' || status === 'idle') return null;
   const cfg =
-    status === 'connecting'
-      ? { dot: 'bg-cyan-400', tone: 'text-cyan-300', bg: 'bg-cyan-500/10', border: 'border-cyan-500/30', label: t('chat.connecting') }
+    status === 'unauthorized'
+      ? { dot: 'bg-danger', tone: 'text-danger', bg: 'bg-danger-soft', border: 'border-danger/30', label: t('chat.sessionExpired') }
+      : status === 'connecting'
+      ? { dot: 'bg-accent', tone: 'text-accent', bg: 'bg-accent-soft', border: 'border-accent', label: t('chat.connecting') }
       : status === 'reconnecting'
-        ? { dot: 'bg-amber-400', tone: 'text-amber-300', bg: 'bg-amber-500/10', border: 'border-amber-500/30', label: t('chat.reconnecting') }
-        : { dot: 'bg-red-400', tone: 'text-red-300', bg: 'bg-red-500/10', border: 'border-red-500/30', label: t('chat.disconnected') };
+        ? { dot: 'bg-warning', tone: 'text-warning', bg: 'bg-warning-soft', border: 'border-warning/30', label: t('chat.reconnecting') }
+        : { dot: 'bg-danger', tone: 'text-danger', bg: 'bg-danger-soft', border: 'border-danger/30', label: t('chat.disconnected') };
   return (
     <View className={`flex-row items-center gap-1.5 rounded-full border px-2.5 py-0.5 ${cfg.border} ${cfg.bg}`}>
       <View className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
@@ -250,49 +250,93 @@ function ConnectionPill({ status }: { status: string }) {
 
 interface ChatHeaderProps {
   connection: string;
-  hasMessages: boolean;
-  onClear: () => void;
+  /**
+   * Session controls only make sense once there is a conversation to have, and
+   * the screen shows the connect gate instead of a chat until then.
+   */
+  carConnected: boolean;
   onOpenHistory: () => void;
+  onNewSession: () => void;
+  onOpenHelp: () => void;
+  onBack: () => void;
 }
 
-function ChatHeader({ connection, hasMessages, onClear, onOpenHistory }: ChatHeaderProps) {
+function ChatHeader({
+  connection,
+  carConnected,
+  onOpenHistory,
+  onNewSession,
+  onOpenHelp,
+  onBack,
+}: ChatHeaderProps) {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   return (
     <View
       style={{ paddingTop: insets.top }}
-      className="border-b border-zinc-900 bg-bg"
+      className="bg-transparent"
     >
       <View className="flex-row items-center justify-between px-4 pb-3 pt-2">
-        <View className="flex-1">
-          <Text className="text-[10px] font-bold tracking-[2px] text-zinc-500">{t('chat.brand')}</Text>
-          <View className="mt-0.5 flex-row items-center gap-2">
-            <Text className="text-base font-semibold text-zinc-100">{t('chat.diagnostic')}</Text>
-            <ConnectionPill status={connection} />
-          </View>
+        <View className="flex-1 flex-row items-center gap-2">
+          <Pressable
+            onPress={onBack}
+            accessibilityRole="button"
+            accessibilityLabel={t('chat.back')}
+            className="flex-row items-center gap-1 rounded-full bg-surface py-2 pl-2.5 pr-4 active:bg-surface-muted"
+            style={{
+              shadowColor: colors.accent,
+              shadowOpacity: 0.1,
+              shadowRadius: 10,
+              shadowOffset: { width: 0, height: 3 },
+              elevation: 3,
+            }}
+            hitSlop={6}
+          >
+            <Feather name="chevron-left" size={18} color={colors.textPrimary} />
+            <Text className="text-sm font-semibold text-text-primary">{t('chat.back')}</Text>
+          </Pressable>
+          <ConnectionPill status={connection} />
         </View>
         <View className="flex-row items-center gap-1">
+          {carConnected && (
+            <>
+              <Pressable
+                onPress={onNewSession}
+                accessibilityRole="button"
+                accessibilityLabel={t('chat.newSession')}
+                className="h-9 w-9 items-center justify-center rounded-full active:bg-surface"
+                hitSlop={8}
+              >
+                <Feather name="plus-circle" size={16} color={colors.textSecondary} />
+              </Pressable>
+              <Pressable
+                onPress={onOpenHistory}
+                accessibilityRole="button"
+                accessibilityLabel={t('chat.openHistory')}
+                className="h-9 w-9 items-center justify-center rounded-full active:bg-surface"
+                hitSlop={8}
+              >
+                <Feather name="clock" size={16} color={colors.textSecondary} />
+              </Pressable>
+            </>
+          )}
+          {/* Explaining the screen is the one thing worth offering before a car
+              is connected — it is what says why one is needed. */}
           <Pressable
-            onPress={onOpenHistory}
+            onPress={onOpenHelp}
             accessibilityRole="button"
-            accessibilityLabel={t('chat.openHistory')}
-            className="h-9 w-9 items-center justify-center rounded-full active:bg-zinc-900"
+            accessibilityLabel={t('chat.help')}
+            className="h-9 w-9 items-center justify-center rounded-full bg-surface active:bg-surface-muted"
+            style={{
+              shadowColor: colors.accent,
+              shadowOpacity: 0.1,
+              shadowRadius: 10,
+              shadowOffset: { width: 0, height: 3 },
+              elevation: 3,
+            }}
             hitSlop={8}
           >
-            <Feather name="clock" size={16} color={colors.textSecondary} />
-          </Pressable>
-          <Pressable
-            onPress={hasMessages ? onClear : undefined}
-            disabled={!hasMessages}
-            accessibilityRole="button"
-            accessibilityLabel={t('chat.clearConversation')}
-            accessibilityState={{ disabled: !hasMessages }}
-            className={`h-9 w-9 items-center justify-center rounded-full ${
-              hasMessages ? 'active:bg-zinc-900' : 'opacity-30'
-            }`}
-            hitSlop={8}
-          >
-            <Feather name="trash-2" size={15} color={colors.textSecondary} />
+            <Feather name="help-circle" size={16} color={colors.textSecondary} />
           </Pressable>
         </View>
       </View>
@@ -300,96 +344,78 @@ function ChatHeader({ connection, hasMessages, onClear, onOpenHistory }: ChatHea
   );
 }
 
-// ── Input bar ────────────────────────────────────────────────────────────────
 
-interface InputBarProps {
-  onSend: (text: string) => void;
-  onAbort: () => void;
-  disabled: boolean;
+// ── Connect-first gate ───────────────────────────────────────────────────────
+
+/**
+ * Shown instead of the conversation when no adapter is linked.
+ *
+ * The assistant's whole value is that its answers come from this car. With
+ * nothing connected it can only talk in generalities, so the screen asks for a
+ * car rather than inviting a question it would have to hedge.
+ */
+function ConnectGate({ onConnect }: { onConnect: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <NoAdapterState title={t('chat.gateTitle')} body={t('chat.gateBody')}>
+      <Pressable
+        onPress={onConnect}
+        accessibilityRole="button"
+        className="rounded-full bg-accent px-7 py-3.5 active:bg-accent-strong"
+      >
+        <Text className="text-[15px] font-bold text-on-accent">{t('chat.gateCta')}</Text>
+      </Pressable>
+    </NoAdapterState>
+  );
 }
 
-function InputBar({ onSend, onAbort, disabled }: InputBarProps) {
+// ── Live-data banner ─────────────────────────────────────────────────────────
+
+/**
+ * States plainly that the assistant has no link to the car.
+ *
+ * The same fact is in the system prompt, so the model already refuses to
+ * invent readings — but the user deserves to know *before* asking why the
+ * answer is generic, rather than after.
+ */
+function NoLiveDataBanner({
+  simulated,
+  onConnect,
+}: {
+  simulated: boolean;
+  onConnect: () => void;
+}) {
   const { t } = useTranslation();
-  const [text, setText] = useState('');
-  const [focused, setFocused] = useState(false);
-  const isStreaming = useChatStore((s) => s.isStreaming);
-
-  const overLimit = text.length > MAX_CHARS;
-  const showCount = text.length >= CHAR_COUNT_THRESHOLD;
-  const canSend = text.trim().length > 0 && !isStreaming && !overLimit && !disabled;
-
-  const handleSend = () => {
-    if (!canSend) return;
-    onSend(text.trim());
-    setText('');
-  };
-
   return (
-    // The tab bar below already accounts for the home-indicator inset, so
-    // adding it again here would leave an empty band between the input and the
-    // bar. A flat 8 px gap is enough breathing room.
-    <View
-      style={{ paddingBottom: 8, paddingTop: 8 }}
-      className="border-t border-zinc-900 bg-bg px-3"
-    >
-      <View
-        className={`flex-row items-end gap-2 rounded-3xl border bg-zinc-900/60 px-4 py-2.5 ${
-          overLimit
-            ? 'border-red-500/60'
-            : focused
-              ? 'border-cyan-500/40'
-              : 'border-zinc-800'
-        }`}
-      >
-        <TextInput
-          className="flex-1 text-[15px] leading-5 text-zinc-50"
-          placeholder={t('chat.placeholder')}
-          placeholderTextColor="#52525b"
-          value={text}
-          onChangeText={setText}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          multiline
-          style={{ maxHeight: 140, paddingTop: 4, paddingBottom: 4 }}
-          returnKeyType="default"
-          blurOnSubmit={false}
-        />
-        {isStreaming ? (
-          <Pressable
-            onPress={onAbort}
-            accessibilityRole="button"
-            accessibilityLabel={t('chat.stopGenerating')}
-            className="h-9 w-9 items-center justify-center rounded-full bg-red-500 active:bg-red-600"
-            hitSlop={6}
-          >
-            <View className="h-2.5 w-2.5 rounded-[2px] bg-zinc-950" />
-          </Pressable>
-        ) : (
-          <Pressable
-            onPress={handleSend}
-            disabled={!canSend}
-            accessibilityRole="button"
-            accessibilityLabel={t('chat.send')}
-            accessibilityState={{ disabled: !canSend }}
-            className={`h-9 w-9 items-center justify-center rounded-full ${
-              canSend ? 'bg-cyan-500 active:bg-cyan-600' : 'bg-zinc-800'
-            }`}
-            hitSlop={6}
-          >
-            <Feather name="arrow-up" size={18} color={canSend ? colors.bg : colors.textMuted} />
-          </Pressable>
-        )}
+    <View className="mx-4 mt-3 flex-row items-start gap-3 rounded-2xl border border-warning/30 bg-warning-soft px-3 py-2.5">
+      <Feather
+        name="alert-triangle"
+        size={14}
+        color={colors.warning}
+        style={{ marginTop: 2 }}
+      />
+      <View className="flex-1">
+        <Text className="text-[11px] font-bold tracking-wider text-warning">
+          {simulated ? t('chat.simulatedDataTitle') : t('chat.noLiveDataTitle')}
+        </Text>
+        {/* Body in the normal text colour: amber-on-amber is the hardest thing
+            on the screen to read, and the tint already says "warning". */}
+        <Text className="mt-1 text-[12px] leading-[17px] text-text-secondary">
+          {simulated ? t('chat.simulatedDataBody') : t('chat.noLiveDataBody')}
+        </Text>
       </View>
-      {(showCount || overLimit) && (
-        <View className="mt-1 items-end px-2">
-          <Text
-            className={`text-[10px] tabular-nums ${
-              overLimit ? 'text-red-400' : 'text-zinc-600'
-            }`}
-          >
-            {text.length} / {MAX_CHARS}
+      {!simulated && (
+        <Pressable
+          onPress={onConnect}
+          accessibilityRole="button"
+          accessibilityLabel={t('chat.connectAdapter')}
+          hitSlop={6}
+          className="self-center rounded-full bg-warning px-3.5 py-2 active:opacity-80"
+        >
+          <Text className="text-[11px] font-bold text-on-accent">
+            {t('chat.connect')}
           </Text>
-        </View>
+        </Pressable>
       )}
     </View>
   );
@@ -419,45 +445,50 @@ function buildGroupedItems(messages: ChatMessage[]): RenderItem[] {
 // ── Screen ───────────────────────────────────────────────────────────────────
 
 export default function ChatScreen() {
+  // The composer floats over the page; reserve its real height so the last
+  // message is never left underneath it.
+  const tabBarHeight = useBottomTabBarHeight();
   useToolExecutor();
+  useAdapterStatusSync();
+  const db = useSQLiteContext();
   const router = useRouter();
   const { t } = useTranslation();
 
   const messages = useChatStore((s) => s.messages);
-  const isStreaming = useChatStore((s) => s.isStreaming);
   const connection = useChatStore((s) => s.connection);
   const connect = useChatStore((s) => s.connect);
   const disconnect = useChatStore((s) => s.disconnect);
   const sendUserMessage = useChatStore((s) => s.sendUserMessage);
-  const clearMessages = useChatStore((s) => s.clearMessages);
   const pendingWriteConfirmation = useChatStore((s) => s.pendingWriteConfirmation);
   const confirmWrite = useChatStore((s) => s.confirmWrite);
   const denyWrite = useChatStore((s) => s.denyWrite);
-  const abort = useChatStore((s) => s.abort);
   const locale = useLocaleStore((s) => s.locale);
   const listRef = useRef<FlatList<RenderItem>>(null);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+  const [helpVisible, setHelpVisible] = useState(false);
 
-  const sessionId = useMemo(
-    () => `chat-${Math.random().toString(36).slice(2, 10)}-${Date.now().toString(36)}`,
-    [],
-  );
+  // Session lifecycle lives in a store, not in this component: the AI tab
+  // unmounts on every tab switch, and a `useMemo` id meant a brand-new
+  // conversation each time — the previous transcript was simply orphaned.
+  const { sessionId, startNew } = useChatSession();
 
-  // Reconnect the chat WebSocket whenever the adapter comes online or goes
-  // offline, so the backend's `register` payload reflects the current
-  // supported_pids list. Without this re-register, the AI keeps the stale
-  // empty-PID snapshot from initial mount and concludes "no vehicle".
-  const phase = useBleStore((s) => s.connectionPhase);
-  const hasAdapter = phase === 'ready' || phase === 'reading';
+  // Only a physical adapter counts as a live link. A simulated one is exposed
+  // in E2E builds alone, and even there the banner still says the numbers are
+  // not coming off the user's car.
+  const adapterKind = useBleStore((s) => s.adapterKind);
+  const hasLiveLink = adapterKind === 'real';
+  // Any adapter counts for the gate — a simulated one still gives the
+  // assistant something to read, and the banner already says which it is.
+  const carConnected = adapterKind !== null;
 
   useEffect(() => {
-    const token = getAccessToken();
-    if (!token) return;
+    if (!sessionId) return;
+    // A session switch has to tear the socket down and reopen it: the backend
+    // keys its conversation state off the session id sent at connect time.
     disconnect();
-    connect({ token, sessionId, locale });
+    connect({ sessionId, locale, db });
     return () => disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId, locale, hasAdapter]);
+  }, [sessionId, locale, db, connect, disconnect]);
 
   // Auto-scroll on keyboard open so the latest message stays in view when the
   // user starts composing a reply.
@@ -469,6 +500,14 @@ export default function ChatScreen() {
     });
     return () => sub.remove();
   }, [showScrollToBottom]);
+
+  const lastNonAssistantTab = useTabHistory((s) => s.lastNonAssistantTab);
+  const navigation = useNavigation();
+  const handleBack = useCallback(() => {
+    // getParent() is the tab navigator; the assistant's own Stack has nothing
+    // to go back to.
+    (navigation.getParent() ?? navigation).navigate(lastNonAssistantTab as never);
+  }, [navigation, lastNonAssistantTab]);
 
   const handleSend = useCallback(
     (text: string) => {
@@ -528,31 +567,44 @@ export default function ChatScreen() {
 
   return (
     <KeyboardAvoidingView
-      className="flex-1 bg-bg"
+      className="flex-1"
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={0}
     >
       <ChatHeader
         connection={connection}
-        hasMessages={messages.length > 0}
-        onClear={clearMessages}
-        onOpenHistory={() => router.push('/(app)/ai/history' as never)}
+        carConnected={carConnected}
+        onOpenHistory={() => router.push('/ai/history')}
+        onNewSession={() => void startNew()}
+        onOpenHelp={() => setHelpVisible(true)}
+        onBack={handleBack}
       />
 
+      <AssistantHelpSheet visible={helpVisible} onClose={() => setHelpVisible(false)} />
+
+      {carConnected && !hasLiveLink && (
+        <NoLiveDataBanner
+          simulated={adapterKind === 'simulated'}
+          onConnect={() => router.push('/pair')}
+        />
+      )}
+
         {isE2E() && (
-          <View testID="e2e-chat-toolbar" className="border-b border-zinc-800 bg-zinc-900 px-4 py-2">
+          <View testID="e2e-chat-toolbar" className="flex-row justify-end px-4 pt-2">
+            {/* Test-only control. Kept deliberately plain and out of the way so
+                it never reads as part of the product's UI. */}
             <Pressable
               testID="e2e-clear-dtcs"
               onPress={handleE2eClearDtcs}
               disabled={e2eClearing}
-              className={`items-center rounded-lg px-3 py-2 ${e2eClearing ? 'bg-violet-900' : 'bg-violet-600'}`}
+              className="rounded-full border border-border bg-surface px-3 py-1 active:bg-surface-muted"
             >
-              <Text className="text-xs font-semibold text-white">
+              <Text className="text-[10px] font-semibold text-text-dim">
                 {e2eClearing ? 'E2E: clearing DTCs…' : 'E2E: clear DTCs (mock)'}
               </Text>
             </Pressable>
             {e2eClearStatus && (
-              <Text testID="e2e-clear-dtcs-status" className="mt-1 text-center text-xs text-violet-300">
+              <Text testID="e2e-clear-dtcs-status" className="mt-1 text-center text-xs text-info">
                 {e2eClearStatus === 'cleared'
                   ? 'DTCs cleared'
                   : e2eClearStatus === 'no-adapter'
@@ -563,7 +615,9 @@ export default function ChatScreen() {
           </View>
         )}
 
-        {messages.length === 0 ? (
+        {!carConnected ? (
+          <ConnectGate onConnect={() => router.push('/pair')} />
+        ) : messages.length === 0 ? (
           <EmptyChat onSend={handleSend} />
         ) : (
           <View className="flex-1">
@@ -572,7 +626,7 @@ export default function ChatScreen() {
               data={items}
               keyExtractor={(item) => item.msg.id}
               renderItem={renderItem}
-              contentContainerStyle={{ paddingTop: 16, paddingBottom: 16 }}
+              contentContainerStyle={{ paddingTop: 16, paddingBottom: 16 + tabBarHeight }}
               onScroll={handleScroll}
               onContentSizeChange={handleContentSizeChange}
               scrollEventThrottle={120}
@@ -584,7 +638,7 @@ export default function ChatScreen() {
                 onPress={() => listRef.current?.scrollToEnd({ animated: true })}
                 accessibilityRole="button"
                 accessibilityLabel={t('chat.scrollToLatest')}
-                className="absolute bottom-4 right-4 h-10 w-10 items-center justify-center rounded-full border border-zinc-800 bg-zinc-900"
+                className="absolute bottom-4 right-4 h-10 w-10 items-center justify-center rounded-full border border-border bg-surface"
               >
                 <Feather name="chevron-down" size={18} color={colors.textSecondary} />
               </Pressable>
@@ -592,11 +646,6 @@ export default function ChatScreen() {
           </View>
         )}
 
-        <InputBar
-          onSend={handleSend}
-          onAbort={abort}
-          disabled={connection !== 'connected'}
-        />
 
       {pendingWriteConfirmation && (
         <WriteConfirmModal

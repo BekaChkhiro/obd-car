@@ -42,10 +42,10 @@ const STALE_MS = 10_000;
 type ToolStatus = 'pending' | 'running' | 'done' | 'error';
 
 const STATUS_DOT: Record<ToolStatus, string> = {
-  pending: 'bg-zinc-500',
-  running: 'bg-cyan-400',
-  done: 'bg-emerald-400',
-  error: 'bg-red-400',
+  pending: 'bg-text-muted',
+  running: 'bg-accent',
+  done: 'bg-success',
+  error: 'bg-danger',
 };
 
 interface Props {
@@ -71,20 +71,20 @@ export function PidWidget({ toolName, toolInput, toolStatus }: Props) {
   const isLive = updatedAt !== null && Date.now() - updatedAt < STALE_MS;
 
   return (
-    <View className="self-start flex-row items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/70 px-2.5 py-1">
+    <View className="self-start flex-row items-center gap-2 rounded-full border border-border bg-surface px-2.5 py-1">
       <View className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[toolStatus]}`} />
-      <Text className="text-[10px] font-semibold tracking-wider text-zinc-400">{label}</Text>
+      <Text className="text-[10px] font-semibold tracking-wider text-text-muted">{label}</Text>
       {hasValue ? (
-        <Text className="text-[12px] font-semibold tabular-nums text-zinc-50">
+        <Text className="text-[12px] font-semibold tabular-nums text-text-primary">
           {value.toFixed(precision)}
-          {unit ? <Text className="text-zinc-500"> {unit}</Text> : null}
+          {unit ? <Text className="text-text-muted"> {unit}</Text> : null}
         </Text>
       ) : (
-        <Text className="text-[12px] font-semibold text-zinc-700">
+        <Text className="text-[12px] font-semibold text-text-dim">
           {toolStatus === 'running' ? '…' : '—'}
         </Text>
       )}
-      {isLive && <View className="h-1 w-1 rounded-full bg-emerald-400" />}
+      {isLive && <View className="h-1 w-1 rounded-full bg-success" />}
     </View>
   );
 }

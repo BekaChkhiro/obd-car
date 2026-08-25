@@ -15,6 +15,15 @@ export interface ScannedDevice {
   rssi: number | null;
 }
 
+/**
+ * Where the currently-connected adapter came from.
+ *
+ * `simulated` means a mock ELM327 (E2E/demo builds). It is tracked separately
+ * from `real` so nothing downstream — least of all the AI assistant — can
+ * present generated numbers as measurements from the user's actual car.
+ */
+export type AdapterKind = 'real' | 'simulated';
+
 interface BleState {
   connectionPhase: ConnectionPhase;
   connectionError: string | null;
@@ -22,6 +31,24 @@ interface BleState {
   permissionGranted: boolean;
   devices: ScannedDevice[];
   connectedDeviceId: string | null;
+  /** Mode-01 PIDs the ECU reported as supported, e.g. ['010C','010D']. */
+  supportedPids: string[];
+  /** Null when nothing is connected. */
+  adapterKind: AdapterKind | null;
+  /**
+   * VIN read from the ECU on connect, or null when unread/unavailable.
+   *
+   * It is what identifies the car rather than the dongle: the make decoded
+   * from it decides what a manufacturer-specific DTC means, and it keys the
+   * protocol cache to the vehicle instead of to the adapter.
+   */
+  vin: string | null;
+  /**
+   * Stored trouble codes counted on the last read, or null when nothing has
+   * been read yet. Null and 0 are different answers — "unknown" must not be
+   * shown as "no faults".
+   */
+  dtcCount: number | null;
 
   /** Convenience alias — true when connectionPhase === 'scanning'. */
   isScanning: boolean;
@@ -40,6 +67,10 @@ interface BleState {
   upsertDevice: (device: Device) => void;
   clearDevices: () => void;
   setConnectedDeviceId: (id: string | null) => void;
+  setSupportedPids: (pids: string[]) => void;
+  setAdapterKind: (kind: AdapterKind | null) => void;
+  setVin: (vin: string | null) => void;
+  setDtcCount: (count: number | null) => void;
   /** @deprecated Use setConnectionPhase('scanning' | 'disconnected') via ConnectionMachine. */
   setScanning: (scanning: boolean) => void;
   setProtocolOverride: (override: number | null) => void;
@@ -52,6 +83,10 @@ export const useBleStore = create<BleState>((set) => ({
   permissionGranted: false,
   devices: [],
   connectedDeviceId: null,
+  supportedPids: [],
+  adapterKind: null,
+  vin: null,
+  dtcCount: null,
   isScanning: false,
   protocolOverride: null,
 
@@ -79,6 +114,14 @@ export const useBleStore = create<BleState>((set) => ({
   clearDevices: () => set({ devices: [] }),
 
   setConnectedDeviceId: (id) => set({ connectedDeviceId: id }),
+
+  setSupportedPids: (pids) => set({ supportedPids: pids }),
+
+  setAdapterKind: (kind) => set({ adapterKind: kind }),
+
+  setVin: (vin) => set({ vin }),
+
+  setDtcCount: (dtcCount) => set({ dtcCount }),
 
   setScanning: (scanning) =>
     set((state) => ({

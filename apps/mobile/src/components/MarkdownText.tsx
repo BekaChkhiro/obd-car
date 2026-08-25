@@ -169,14 +169,14 @@ function renderSegments(
   dimmed: boolean | undefined,
   keyPrefix = '',
 ): React.ReactNode[] {
-  const base = dimmed ? 'text-zinc-400' : 'text-zinc-100';
+  const base = dimmed ? 'text-text-muted' : 'text-text-primary';
   return segments.map((seg, i) => {
     const key = `${keyPrefix}-${i}`;
     if (seg.type === 'bold') {
       return (
         <Text
           key={key}
-          className={`font-semibold ${dimmed ? 'text-zinc-300' : 'text-zinc-50'}`}
+          className={`font-semibold ${dimmed ? 'text-text-secondary' : 'text-text-primary'}`}
         >
           {seg.text}
         </Text>
@@ -191,7 +191,7 @@ function renderSegments(
     }
     if (seg.type === 'strike') {
       return (
-        <Text key={key} className="line-through text-zinc-500">
+        <Text key={key} className="line-through text-text-muted">
           {seg.text}
         </Text>
       );
@@ -200,7 +200,7 @@ function renderSegments(
       return (
         <Text
           key={key}
-          className="rounded bg-zinc-800 px-1 font-mono text-[12.5px] text-cyan-300"
+          className="rounded bg-surface-muted px-1 font-mono text-[12.5px] text-accent"
         >
           {seg.text}
         </Text>
@@ -216,7 +216,7 @@ function renderSegments(
 
 function ParaLine({ text, dimmed }: { text: string; dimmed?: boolean }) {
   const segments = parseInline(text);
-  const base = dimmed ? 'text-zinc-400' : 'text-zinc-100';
+  const base = dimmed ? 'text-text-muted' : 'text-text-primary';
   return (
     <Text className={`text-[15px] leading-[20px] ${base}`}>
       {renderSegments(segments, dimmed)}
@@ -228,16 +228,16 @@ function ParaLine({ text, dimmed }: { text: string; dimmed?: boolean }) {
 
 function CodeBlock({ text, lang }: { text: string; lang: string | null }) {
   return (
-    <View className="my-1 self-start overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950">
+    <View className="my-1 self-start overflow-hidden rounded-lg border border-border bg-bg">
       {lang && (
-        <View className="border-b border-zinc-800 px-2.5 py-1">
-          <Text className="text-[9px] font-bold tracking-[2px] text-zinc-500">
+        <View className="border-b border-border px-2.5 py-1">
+          <Text className="text-[9px] font-bold tracking-[2px] text-text-muted">
             {lang.toUpperCase()}
           </Text>
         </View>
       )}
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <Text className="px-3 py-2 font-mono text-[12.5px] leading-[17px] text-zinc-200">
+        <Text className="px-3 py-2 font-mono text-[12.5px] leading-[17px] text-text-secondary">
           {text}
         </Text>
       </ScrollView>
@@ -248,8 +248,8 @@ function CodeBlock({ text, lang }: { text: string; lang: string | null }) {
 function Blockquote({ text, dimmed }: { text: string; dimmed?: boolean }) {
   // Border-left instead of a separate bar so the View sizes to content.
   return (
-    <View className="my-1 self-start rounded-r-lg border-l-2 border-cyan-500/60 bg-zinc-950/60 px-3 py-1.5">
-      <Text className={`text-[13.5px] leading-[18px] ${dimmed ? 'text-zinc-400' : 'text-zinc-300'}`}>
+    <View className="my-1 self-start rounded-r-lg border-l-2 border-accent bg-bg px-3 py-1.5">
+      <Text className={`text-[13.5px] leading-[18px] ${dimmed ? 'text-text-muted' : 'text-text-secondary'}`}>
         {renderSegments(parseInline(text), dimmed)}
       </Text>
     </View>
@@ -260,20 +260,20 @@ const CALLOUT_STYLES: Record<CalloutKind, {
   bg: string; border: string; accent: string; title: string; mark: string;
 }> = {
   note: {
-    bg: 'bg-cyan-500/10', border: 'border-cyan-500/30', accent: 'bg-cyan-400',
-    title: 'text-cyan-300', mark: 'NOTE',
+    bg: 'bg-accent-soft', border: 'border-accent', accent: 'bg-accent',
+    title: 'text-accent', mark: 'NOTE',
   },
   tip: {
-    bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', accent: 'bg-emerald-400',
-    title: 'text-emerald-300', mark: 'TIP',
+    bg: 'bg-success-soft', border: 'border-success/30', accent: 'bg-success',
+    title: 'text-success', mark: 'TIP',
   },
   warn: {
-    bg: 'bg-amber-500/10', border: 'border-amber-500/30', accent: 'bg-amber-400',
-    title: 'text-amber-300', mark: 'WARNING',
+    bg: 'bg-warning-soft', border: 'border-warning/30', accent: 'bg-warning',
+    title: 'text-warning', mark: 'WARNING',
   },
   danger: {
-    bg: 'bg-red-500/10', border: 'border-red-500/30', accent: 'bg-red-400',
-    title: 'text-red-300', mark: 'DANGER',
+    bg: 'bg-danger-soft', border: 'border-danger/30', accent: 'bg-danger',
+    title: 'text-danger', mark: 'DANGER',
   },
 };
 
@@ -285,7 +285,7 @@ function Callout({ tone, text }: { tone: CalloutKind; title: string; text: strin
         <View className={`h-1 w-1 rounded-full ${s.accent}`} />
         <Text className={`text-[9px] font-bold tracking-[2px] ${s.title}`}>{s.mark}</Text>
       </View>
-      <Text className="text-[15px] leading-[20px] text-zinc-100">
+      <Text className="text-[15px] leading-[20px] text-text-primary">
         {renderSegments(parseInline(text), undefined)}
       </Text>
     </View>
@@ -294,10 +294,10 @@ function Callout({ tone, text }: { tone: CalloutKind; title: string; text: strin
 
 function BulletLine({ text, dimmed }: { text: string; dimmed?: boolean }) {
   const segments = parseInline(text);
-  const base = dimmed ? 'text-zinc-400' : 'text-zinc-100';
+  const base = dimmed ? 'text-text-muted' : 'text-text-primary';
   return (
     <Text className={`text-[15px] leading-[20px] ${base}`}>
-      <Text className="text-cyan-400">{'·  '}</Text>
+      <Text className="text-accent">{'·  '}</Text>
       {renderSegments(segments, dimmed)}
     </Text>
   );
@@ -305,17 +305,17 @@ function BulletLine({ text, dimmed }: { text: string; dimmed?: boolean }) {
 
 function NumberedLine({ index, text, dimmed }: { index: number; text: string; dimmed?: boolean }) {
   const segments = parseInline(text);
-  const base = dimmed ? 'text-zinc-400' : 'text-zinc-100';
+  const base = dimmed ? 'text-text-muted' : 'text-text-primary';
   return (
     <Text className={`text-[15px] leading-[20px] ${base}`}>
-      <Text className="font-semibold text-cyan-400 tabular-nums">{`${index}. `}</Text>
+      <Text className="font-semibold text-accent tabular-nums">{`${index}. `}</Text>
       {renderSegments(segments, dimmed)}
     </Text>
   );
 }
 
 function HR() {
-  return <View className="my-1.5 h-px self-stretch bg-zinc-800" />;
+  return <View className="my-1.5 h-px self-stretch bg-surface-muted" />;
 }
 
 // ── Main component ──────────────────────────────────────────────────────────
@@ -329,19 +329,19 @@ export function MarkdownText({ content, dimmed }: Props) {
         switch (b.kind) {
           case 'h1':
             return (
-              <Text key={i} className="mb-0.5 text-[16px] font-bold leading-[22px] text-zinc-50">
+              <Text key={i} className="mb-0.5 text-[16px] font-bold leading-[22px] text-text-primary">
                 {b.text}
               </Text>
             );
           case 'h2':
             return (
-              <Text key={i} className="mb-0.5 text-[15px] font-bold leading-[20px] text-zinc-50">
+              <Text key={i} className="mb-0.5 text-[15px] font-bold leading-[20px] text-text-primary">
                 {b.text}
               </Text>
             );
           case 'h3':
             return (
-              <Text key={i} className="mb-0.5 text-[14px] font-semibold leading-[19px] text-zinc-200">
+              <Text key={i} className="mb-0.5 text-[14px] font-semibold leading-[19px] text-text-secondary">
                 {b.text}
               </Text>
             );
