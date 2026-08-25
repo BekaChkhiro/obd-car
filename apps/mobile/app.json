@@ -18,8 +18,12 @@
       "bundleIdentifier": "com.beka.obdcar",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSBluetoothAlwaysUsageDescription": "Auto Area connects to your OBD-II adapter over Bluetooth to read live engine data and trouble codes from your car.",
-        "NSLocalNetworkUsageDescription": "Auto Area connects to Wi-Fi OBD-II adapters, which create their own local network in your car."
+        "NSBluetoothAlwaysUsageDescription": "OBD Car connects to your OBD-II adapter over Bluetooth to read live engine data and trouble codes from your car.",
+        "NSLocalNetworkUsageDescription": "OBD Car connects to Wi-Fi OBD-II adapters, which create their own local network in your car.",
+        "CFBundleLocalizations": [
+          "en",
+          "ka"
+        ]
       },
       "appleTeamId": "REPLACE_WITH_APPLE_TEAM_ID",
       "buildNumber": "1",
@@ -100,7 +104,7 @@
         "react-native-ble-plx",
         {
           "isBackgroundEnabled": false,
-          "bluetoothAlwaysPermission": "Auto Area connects to your OBD-II adapter over Bluetooth to read live engine data and trouble codes from your car."
+          "bluetoothAlwaysPermission": "OBD Car connects to your OBD-II adapter over Bluetooth to read live engine data and trouble codes from your car."
         }
       ]
     ],

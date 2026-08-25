@@ -235,7 +235,7 @@ export const en = {
     sections: [
       {
         title: 'What we collect',
-        body: 'Your email address and password (stored only as a one-way hash), optional vehicle details (make, model, year, VIN), the messages you send the assistant, and the OBD readings, diagnostic trouble codes and freeze-frame data read during a session.',
+        body: 'Your phone number and the name you give when you register, optional vehicle details (make, model, year, VIN), the messages you send the assistant, and the OBD readings, diagnostic trouble codes and freeze-frame data read during a session. There is no password: you sign in with a code sent by SMS.',
       },
       {
         title: 'Why we need it',
@@ -243,7 +243,7 @@ export const en = {
       },
       {
         title: 'Who we share it with',
-        body: 'To produce an answer, the conversation text and the readings attached to it are sent to the Anthropic API. We do not sell data and we do not share it with advertising networks.',
+        body: 'To produce an answer, the conversation text and the readings attached to it are sent to the Anthropic API. Your phone number is sent to sender.ge, the Georgian gateway that delivers your sign-in code, and only for that. We do not sell data and we do not share it with advertising networks.',
       },
       {
         title: 'Where it is stored',
