@@ -76,3 +76,10 @@ coverage/
 .cache/
 .turbo/
 .planflow/worktrees.json
+
+# Local tool state, not project content: the index cache is rebuilt on demand
+# and its commit hash changes on every reindex, so tracking it turns routine
+# tool use into repository noise.
+.planflow/index-state.json
+apps/*/.planflow/
+.workstation/

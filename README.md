@@ -10,6 +10,7 @@ See [`PROJECT_PLAN.md`](./PROJECT_PLAN.md) for the full plan.
 obd-car/
   apps/
     mobile/          # Expo app (T0.2)
+    landing/         # Next.js marketing site (ka / en)
   services/
     backend/         # FastAPI app (T0.3)
   packages/
