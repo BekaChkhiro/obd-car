@@ -16,6 +16,10 @@ const storeAdapter: BleStoreInterface = {
   setScanning: (scanning) => useBleStore.getState().setScanning(scanning),
   upsertDevice: (device) => useBleStore.getState().upsertDevice(device),
   clearDevices: () => useBleStore.getState().clearDevices(),
+  setSupportedPids: (pids) => useBleStore.getState().setSupportedPids(pids),
+  setAdapterKind: (kind) => useBleStore.getState().setAdapterKind(kind),
+  setVin: (vin) => useBleStore.getState().setVin(vin),
+  setDtcCount: (count) => useBleStore.getState().setDtcCount(count),
   getProtocolOverride: () => useBleStore.getState().protocolOverride,
 };
 

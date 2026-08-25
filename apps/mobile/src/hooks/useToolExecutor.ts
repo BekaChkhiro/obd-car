@@ -55,6 +55,11 @@ export function useToolExecutor(): void {
                 code: d.code,
                 description: d.description ?? null,
                 isPending: d.isPending,
+                // Tells the model apart the two reasons a description is null:
+                // we have no entry, versus the code is brand-specific and the
+                // vehicle is unidentified. Only the second is fixed by asking.
+                needsMake: d.needsMake,
+                subsystem: d.subsystem,
               })),
             };
             break;
