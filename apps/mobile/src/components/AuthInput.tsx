@@ -9,13 +9,13 @@ interface Props extends TextInputProps {
 
 const AuthInput = forwardRef<TextInput, Props>(({ label, error, ...props }, ref) => (
   <View className="mb-4">
-    <Text className="mb-1.5 text-[10px] font-bold tracking-eyebrow text-zinc-500">
+    <Text className="mb-1.5 text-[10px] font-bold tracking-eyebrow text-text-muted">
       {label.toUpperCase()}
     </Text>
     <TextInput
       ref={ref}
-      className={`rounded-xl border bg-zinc-900/60 px-4 py-3 text-base text-zinc-50 ${
-        error ? 'border-red-500/60' : 'border-zinc-800'
+      className={`rounded-xl border bg-surface px-4 py-3 text-base text-text-primary ${
+        error ? 'border-danger/30' : 'border-border'
       }`}
       style={{ minHeight: 48 }}
       accessibilityLabel={label}
@@ -24,7 +24,7 @@ const AuthInput = forwardRef<TextInput, Props>(({ label, error, ...props }, ref)
       autoCorrect={false}
       {...props}
     />
-    {error ? <Text className="mt-1.5 text-xs text-red-400">{error}</Text> : null}
+    {error ? <Text className="mt-1.5 text-xs text-danger">{error}</Text> : null}
   </View>
 ));
 

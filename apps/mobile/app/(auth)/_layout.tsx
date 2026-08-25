@@ -1,23 +1,24 @@
 import { Redirect, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useAuthStore } from '@/src/store/auth';
-import { colors } from '@/src/theme/colors';
+import { ambientScreenLayout } from '@/src/components/AmbientScreen';
 
 export default function AuthLayout() {
   const user = useAuthStore((s) => s.user);
   const isHydrated = useAuthStore((s) => s.isHydrated);
 
   if (isHydrated && user) {
-    return <Redirect href="/(app)/" />;
+    return <Redirect href="/(app)/(tabs)/(home)" />;
   }
 
   return (
     <>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <Stack
+        screenLayout={ambientScreenLayout}
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: colors.bg },
+          contentStyle: { backgroundColor: 'transparent' },
         }}
       >
         <Stack.Screen name="sign-in" />

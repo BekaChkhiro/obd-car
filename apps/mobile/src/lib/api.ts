@@ -1,5 +1,11 @@
 import Constants from 'expo-constants';
-import type { AuthResponse, LoginPayload, RegisterPayload, TokenPair } from '../types/auth';
+import type {
+  AuthResponse,
+  RequestCodePayload,
+  RequestCodeResponse,
+  TokenPair,
+  VerifyCodePayload,
+} from '../types/auth';
 import { clearTokens, loadTokens, saveTokens } from './token-store';
 
 const BASE_URL: string =
@@ -19,6 +25,54 @@ export async function hydrateTokens(): Promise<void> {
 
 export function getAccessToken(): string | null {
   return accessToken;
+}
+
+/** Refresh this many seconds before the token actually expires. */
+const TOKEN_EXPIRY_SKEW_SECONDS = 60;
+
+/** `exp` out of a JWT, or null when it can't be read. */
+function tokenExpiry(token: string): number | null {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return null;
+    const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+    const exp: unknown = JSON.parse(json).exp;
+    return typeof exp === 'number' ? exp : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * An access token that is still valid, refreshing it first when it is not.
+ *
+ * `getAccessToken()` returns whatever is in memory, which is enough for REST:
+ * a 401 there triggers a refresh and a retry. A WebSocket has no such second
+ * chance — the handshake carries the token in the URL and a stale one is
+ * rejected outright — so the socket layer has to start from a fresh token.
+ *
+ * Returns null when there is nothing left to refresh with; the caller should
+ * treat that as "signed out" rather than retrying.
+ */
+export async function getFreshAccessToken(forceRefresh = false): Promise<string | null> {
+  const expiry = accessToken ? tokenExpiry(accessToken) : null;
+  const stillValid =
+    accessToken !== null &&
+    expiry !== null &&
+    expiry - TOKEN_EXPIRY_SKEW_SECONDS > Date.now() / 1000;
+
+  if (!forceRefresh && stillValid) return accessToken;
+  if (!refreshToken) return stillValid ? accessToken : null;
+
+  // Share one refresh between every caller — the chat socket and an in-flight
+  // request can ask at the same moment, and the backend rotates refresh
+  // tokens, so a second concurrent call would present an already-spent one.
+  if (!refreshingPromise) {
+    refreshingPromise = refreshAccessToken().finally(() => {
+      refreshingPromise = null;
+    });
+  }
+  return refreshingPromise;
 }
 
 export function setInMemoryTokens(access: string, refresh: string): void {
@@ -108,25 +162,27 @@ export class ApiError extends Error {
 }
 
 export const authApi = {
-  register: (payload: RegisterPayload): Promise<AuthResponse> =>
-    apiFetch<AuthResponse>('/auth/register', {
+  requestCode: (payload: RequestCodePayload): Promise<RequestCodeResponse> =>
+    apiFetch<RequestCodeResponse>('/auth/request-code', {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
 
-  login: (payload: LoginPayload): Promise<AuthResponse> =>
-    apiFetch<AuthResponse>('/auth/login', {
+  verifyCode: (payload: VerifyCodePayload): Promise<AuthResponse> =>
+    apiFetch<AuthResponse>('/auth/verify-code', {
       method: 'POST',
       body: JSON.stringify(payload),
-    }),
-
-  google: (idToken: string): Promise<AuthResponse> =>
-    apiFetch<AuthResponse>('/auth/google', {
-      method: 'POST',
-      body: JSON.stringify({ id_token: idToken }),
     }),
 
   me: () => apiFetch<import('../types/auth').UserPublic>('/auth/me'),
+
+  updateProfile: (
+    payload: import('../types/auth').ProfileUpdate,
+  ): Promise<import('../types/auth').UserPublic> =>
+    apiFetch<import('../types/auth').UserPublic>('/auth/me', {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
 
   deleteAccount: (): Promise<void> =>
     apiFetch<void>('/auth/me', { method: 'DELETE' }),

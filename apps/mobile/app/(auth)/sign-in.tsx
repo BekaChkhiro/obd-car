@@ -11,190 +11,179 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
-import { useAuthRequest } from 'expo-auth-session/providers/google';
-import Constants from 'expo-constants';
+import { Link, useRouter } from 'expo-router';
 import { colors } from '@/src/theme/colors';
 import { ApiError } from '@/src/lib/api';
+import { describeAuthError } from '@/src/lib/auth-errors';
+import { formatGeorgianPhone, isValidGeorgianMobile, toE164 } from '@/src/lib/phone';
 import { useAuthStore } from '@/src/store/auth';
 import { useOnboardingStore } from '@/src/store/onboarding';
-import AuthInput from '@/src/components/AuthInput';
+import PhoneInput from '@/src/components/PhoneInput';
+import { AuthCodeStep } from '@/src/components/AuthCodeStep';
 import { isE2E } from '@/src/lib/e2e';
 
-WebBrowser.maybeCompleteAuthSession();
-
-type Translate = ReturnType<typeof useTranslation>['t'];
-
-function validate(email: string, password: string, t: Translate): Record<string, string> {
-  const errors: Record<string, string> = {};
-  if (!email.trim()) errors.email = t('auth.emailRequired');
-  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = t('auth.emailInvalid');
-  if (!password) errors.password = t('auth.passwordRequired');
-  return errors;
-}
+type Step = 'phone' | 'code';
 
 export default function SignInScreen() {
   const { t } = useTranslation();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [serverError, setServerError] = useState('');
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-
-  const { login, googleSignIn, isLoading, e2eSignIn } = useAuthStore();
+  const router = useRouter();
+  const { requestCode, verifyCode, isLoading, e2eSignIn } = useAuthStore();
   const markOnboarded = useOnboardingStore((s) => s.markOnboarded);
+
+  const [step, setStep] = useState<Step>('phone');
+  const [phoneDigits, setPhoneDigits] = useState('');
+  const [code, setCode] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+  const [serverError, setServerError] = useState('');
+  const [resendAfter, setResendAfter] = useState(60);
+  const [sendKey, setSendKey] = useState(0);
 
   function handleE2eSignIn() {
     e2eSignIn();
     markOnboarded();
   }
 
-  const [, googleResponse, googlePromptAsync] = useAuthRequest({
-    iosClientId: Constants.expoConfig?.extra?.googleIosClientId as string | undefined,
-    androidClientId: Constants.expoConfig?.extra?.googleAndroidClientId as string | undefined,
-  });
-
-  async function handleLogin() {
-    const errors = validate(email, password, t);
-    if (Object.keys(errors).length > 0) {
-      setFieldErrors(errors);
+  async function sendCode() {
+    if (!isValidGeorgianMobile(phoneDigits)) {
+      setPhoneError(t('auth.phoneInvalid'));
       return;
     }
-    setFieldErrors({});
+    setPhoneError('');
     setServerError('');
     try {
-      await login(email.trim().toLowerCase(), password);
+      const res = await requestCode(toE164(phoneDigits));
+      setResendAfter(res.resend_after);
+      setSendKey((k) => k + 1);
+      setCode('');
+      setStep('code');
     } catch (err) {
-      setServerError(err instanceof ApiError ? err.message : t('auth.genericError'));
-    }
-  }
-
-  async function handleGoogle() {
-    setServerError('');
-    setIsGoogleLoading(true);
-    try {
-      const result = await googlePromptAsync();
-      if (result?.type === 'success') {
-        const idToken = result.authentication?.idToken;
-        if (!idToken) {
-          setServerError(t('auth.googleNoToken'));
-          return;
-        }
-        await googleSignIn(idToken);
+      if (err instanceof ApiError && err.status === 404) {
+        // The number has no account, and the server said so before sending
+        // anything. Going straight to the register screen with the digits
+        // already filled in is the whole point of learning it this early —
+        // the alternative was an SMS whose only possible outcome was this.
+        router.push({ pathname: '/(auth)/sign-up', params: { phone: phoneDigits } });
+        return;
       }
-    } catch (err) {
-      setServerError(err instanceof ApiError ? err.message : t('auth.googleFailed'));
-    } finally {
-      setIsGoogleLoading(false);
+      setServerError(describeAuthError(err, t));
     }
   }
 
-  // Pick up cancelled/dismissed results from googleResponse
-  if (googleResponse?.type === 'error') {
-    // Already handled above; show nothing extra.
+  function handleChangeCode(next: string) {
+    setCode(next);
+    // Typing again after a rejected code is the retry — the red boxes and
+    // banner have done their job once the person has acted on them.
+    if (serverError) setServerError('');
+  }
+
+  async function handleVerify(enteredCode: string) {
+    setServerError('');
+    try {
+      await verifyCode(toE164(phoneDigits), enteredCode);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        // This phone has no account — the code was valid, there is just
+        // nothing to sign into. Carrying the phone forward means the person
+        // never retypes the nine digits they already got right.
+        router.push({ pathname: '/(auth)/sign-up', params: { phone: phoneDigits } });
+        return;
+      }
+      setCode('');
+      setServerError(describeAuthError(err, t));
+    }
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-bg" edges={['top', 'bottom']}>
+    <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-      <ScrollView
-        contentContainerClassName="flex-grow justify-center px-6 py-12"
-        keyboardShouldPersistTaps="handled"
-      >
-        <Text className="text-center text-[10px] font-bold tracking-[3px] text-zinc-500">
-          {t('garage.brand')}
-        </Text>
-        <Text className="mt-2 text-center text-3xl font-bold text-zinc-50">{t('auth.welcomeBack')}</Text>
-        <Text className="mb-8 mt-2 text-center text-sm text-zinc-500">
-          {t('auth.signInSubtitle')}
-        </Text>
-
-        {serverError ? (
-          <View className="mb-4 flex-row items-center gap-2 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3">
-            <Feather name="alert-circle" size={16} color={colors.danger} />
-            <Text className="flex-1 text-sm text-red-300">{serverError}</Text>
-          </View>
-        ) : null}
-
-        <AuthInput
-          label={t('auth.email')}
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          textContentType="emailAddress"
-          autoComplete="email"
-          error={fieldErrors.email}
-          placeholder="you@example.com"
-        />
-
-        <AuthInput
-          label={t('auth.password')}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          textContentType="password"
-          autoComplete="current-password"
-          error={fieldErrors.password}
-          placeholder="••••••••"
-        />
-
-        <Pressable
-          onPress={handleLogin}
-          disabled={isLoading}
-          accessibilityRole="button"
-          accessibilityLabel={t('auth.signIn')}
-          accessibilityState={{ disabled: isLoading, busy: isLoading }}
-          className="mb-4 items-center rounded-xl bg-cyan-500 py-4 active:bg-cyan-600 disabled:opacity-50"
+        <ScrollView
+          contentContainerClassName="flex-grow justify-center px-6 py-12"
+          keyboardShouldPersistTaps="handled"
         >
-          {isLoading ? (
-            <ActivityIndicator color={colors.bg} />
+          <Text className="text-center text-[10px] font-bold tracking-[3px] text-text-muted">
+            {t('garage.brand')}
+          </Text>
+          <Text className="mt-2 text-center text-3xl font-bold text-text-primary">
+            {t('auth.welcomeBack')}
+          </Text>
+          <Text className="mb-8 mt-2 text-center text-sm text-text-muted">
+            {step === 'phone' ? t('auth.signInSubtitle') : t('auth.enterCodeSubtitle')}
+          </Text>
+
+          {serverError ? (
+            <View className="mb-4 flex-row items-center gap-2 rounded-xl border border-danger/30 bg-danger-soft px-4 py-3">
+              <Feather name="alert-circle" size={16} color={colors.danger} />
+              <Text className="flex-1 text-sm text-danger">{serverError}</Text>
+            </View>
+          ) : null}
+
+          {step === 'phone' ? (
+            <>
+              <PhoneInput
+                label={t('auth.phone')}
+                value={phoneDigits}
+                onChangeText={setPhoneDigits}
+                error={phoneError}
+                editable={!isLoading}
+                autoFocus
+              />
+
+              <Pressable
+                onPress={() => void sendCode()}
+                disabled={isLoading}
+                accessibilityRole="button"
+                accessibilityLabel={t('auth.continue')}
+                accessibilityState={{ disabled: isLoading, busy: isLoading }}
+                className="mb-8 items-center rounded-xl bg-accent py-4 active:bg-accent-strong disabled:opacity-50"
+              >
+                {isLoading ? (
+                  <ActivityIndicator color={colors.bg} />
+                ) : (
+                  <Text className="text-base font-bold tracking-wider text-on-accent">
+                    {t('auth.continue')}
+                  </Text>
+                )}
+              </Pressable>
+
+              <View className="flex-row justify-center">
+                <Text className="text-sm text-text-muted">{t('auth.noAccount')} </Text>
+                <Link href="/(auth)/sign-up">
+                  <Text className="text-sm font-semibold text-accent">{t('auth.signUp')}</Text>
+                </Link>
+              </View>
+            </>
           ) : (
-            <Text className="text-base font-bold tracking-wider text-zinc-950">{t('auth.signIn')}</Text>
+            <AuthCodeStep
+              phoneDisplay={`+995 ${formatGeorgianPhone(phoneDigits)}`}
+              code={code}
+              onChangeCode={handleChangeCode}
+              onComplete={(c) => void handleVerify(c)}
+              onResend={() => void sendCode()}
+              onChangePhone={() => {
+                setStep('phone');
+                setCode('');
+                setServerError('');
+              }}
+              isLoading={isLoading}
+              hasError={!!serverError}
+              resendAfter={resendAfter}
+              sendKey={sendKey}
+            />
           )}
-        </Pressable>
 
-        <View className="mb-6 flex-row items-center">
-          <View className="flex-1 border-t border-zinc-800" />
-          <Text className="mx-3 text-[10px] font-semibold tracking-widest text-zinc-600">{t('common.or')}</Text>
-          <View className="flex-1 border-t border-zinc-800" />
-        </View>
-
-        <Pressable
-          onPress={handleGoogle}
-          disabled={isLoading || isGoogleLoading}
-          accessibilityRole="button"
-          accessibilityLabel={t('auth.continueWithGoogle')}
-          accessibilityState={{ disabled: isLoading || isGoogleLoading, busy: isGoogleLoading }}
-          className="mb-8 flex-row items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/60 py-4 active:bg-zinc-900 disabled:opacity-50"
-        >
-          {isGoogleLoading ? (
-            <ActivityIndicator color={colors.textSecondary} />
-          ) : (
-            <Text className="text-sm font-semibold text-zinc-200">{t('auth.continueWithGoogle')}</Text>
+          {isE2E() && (
+            <Pressable
+              testID="e2e-skip-sign-in"
+              onPress={handleE2eSignIn}
+              className="mt-8 items-center rounded-xl bg-info py-3"
+            >
+              <Text className="text-sm font-semibold text-text-primary">E2E: Skip sign-in</Text>
+            </Pressable>
           )}
-        </Pressable>
-
-        <View className="flex-row justify-center">
-          <Text className="text-sm text-zinc-500">{t('auth.noAccount')} </Text>
-          <Link href="/(auth)/sign-up">
-            <Text className="text-sm font-semibold text-cyan-400">{t('auth.signUp')}</Text>
-          </Link>
-        </View>
-
-        {isE2E() && (
-          <Pressable
-            testID="e2e-skip-sign-in"
-            onPress={handleE2eSignIn}
-            className="mt-8 items-center rounded-xl bg-violet-600 py-3"
-          >
-            <Text className="text-sm font-semibold text-white">E2E: Skip sign-in</Text>
-          </Pressable>
-        )}
-      </ScrollView>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

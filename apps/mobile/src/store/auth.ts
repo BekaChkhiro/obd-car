@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { AuthResponse, UserPublic } from '../types/auth';
+import type { AuthResponse, RequestCodeResponse, UserPublic } from '../types/auth';
 import {
   ApiError,
   authApi,
@@ -16,11 +16,23 @@ interface AuthState {
   isHydrated: boolean;
 
   hydrate: () => Promise<void>;
-  register: (email: string, password: string) => Promise<void>;
-  login: (email: string, password: string) => Promise<void>;
-  googleSignIn: (idToken: string) => Promise<void>;
+  /**
+   * Sends the SMS. `names` is only passed from the register screen — the
+   * server caches them against the code so verifying it can create the
+   * account in the same round trip, rather than needing a second request.
+   */
+  requestCode: (
+    phone: string,
+    names?: { firstName?: string; lastName?: string },
+  ) => Promise<RequestCodeResponse>;
+  verifyCode: (phone: string, code: string) => Promise<void>;
   logout: () => Promise<void>;
   deleteAccount: () => Promise<void>;
+  updateProfile: (payload: {
+    firstName?: string;
+    lastName?: string;
+    locale?: string;
+  }) => Promise<void>;
   /**
    * Stub-sign-in for E2E tests. Bypasses the backend by injecting a fake
    * user and tokens directly into the store. Callers should gate this on
@@ -52,32 +64,25 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  register: async (email, password) => {
+  requestCode: async (phone, names) => {
     set({ isLoading: true });
     try {
-      const res = await authApi.register({ email, password });
-      applyAuthResponse(set, res);
+      return await authApi.requestCode({
+        phone,
+        first_name: names?.firstName ?? null,
+        last_name: names?.lastName ?? null,
+      });
     } catch (err) {
-      set({ isLoading: false });
       throw err instanceof ApiError ? err : new ApiError(0, String(err));
+    } finally {
+      set({ isLoading: false });
     }
   },
 
-  login: async (email, password) => {
+  verifyCode: async (phone, code) => {
     set({ isLoading: true });
     try {
-      const res = await authApi.login({ email, password });
-      applyAuthResponse(set, res);
-    } catch (err) {
-      set({ isLoading: false });
-      throw err instanceof ApiError ? err : new ApiError(0, String(err));
-    }
-  },
-
-  googleSignIn: async (idToken) => {
-    set({ isLoading: true });
-    try {
-      const res = await authApi.google(idToken);
+      const res = await authApi.verifyCode({ phone, code });
       applyAuthResponse(set, res);
     } catch (err) {
       set({ isLoading: false });
@@ -89,6 +94,17 @@ export const useAuthStore = create<AuthState>((set) => ({
     clearInMemoryTokens();
     await clearTokens();
     set({ user: null, isLoading: false });
+  },
+
+  updateProfile: async ({ firstName, lastName, locale }) => {
+    // Send only what changed: the endpoint leaves omitted fields alone, so a
+    // rename cannot silently reset the locale.
+    const user = await authApi.updateProfile({
+      ...(firstName !== undefined ? { first_name: firstName } : {}),
+      ...(lastName !== undefined ? { last_name: lastName } : {}),
+      ...(locale !== undefined ? { locale } : {}),
+    });
+    set({ user });
   },
 
   deleteAccount: async () => {
@@ -107,7 +123,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     setInMemoryTokens('e2e-access-token', 'e2e-refresh-token');
     const user: UserPublic = {
       id: 1,
-      email: 'e2e@example.com',
+      phone: '+995555000000',
+      first_name: 'E2E',
+      last_name: 'Tester',
       locale: 'en',
       created_at: new Date().toISOString(),
     };
