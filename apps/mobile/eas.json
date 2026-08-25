@@ -4,13 +4,7 @@
     "appVersionSource": "remote"
   },
   "build": {
-    "base": {
-      "env": {
-        "SENTRY_DSN": "",
-        "GOOGLE_IOS_CLIENT_ID": "",
-        "GOOGLE_ANDROID_CLIENT_ID": ""
-      }
-    },
+    "base": {},
     "development": {
       "extends": "base",
       "developmentClient": true,
@@ -24,10 +18,7 @@
       },
       "env": {
         "API_URL": "http://localhost:8000",
-        "WS_URL": "ws://localhost:8000",
-        "SENTRY_DSN": "",
-        "GOOGLE_IOS_CLIENT_ID": "",
-        "GOOGLE_ANDROID_CLIENT_ID": ""
+        "WS_URL": "ws://localhost:8000"
       }
     },
     "preview": {
@@ -42,10 +33,7 @@
       },
       "env": {
         "API_URL": "https://obd-ai-backend.fly.dev",
-        "WS_URL": "wss://obd-ai-backend.fly.dev",
-        "SENTRY_DSN": "",
-        "GOOGLE_IOS_CLIENT_ID": "",
-        "GOOGLE_ANDROID_CLIENT_ID": ""
+        "WS_URL": "wss://obd-ai-backend.fly.dev"
       }
     },
     "production": {
@@ -61,19 +49,16 @@
       },
       "env": {
         "API_URL": "https://obd-ai-backend.fly.dev",
-        "WS_URL": "wss://obd-ai-backend.fly.dev",
-        "SENTRY_DSN": "",
-        "GOOGLE_IOS_CLIENT_ID": "",
-        "GOOGLE_ANDROID_CLIENT_ID": ""
+        "WS_URL": "wss://obd-ai-backend.fly.dev"
       }
     }
   },
   "submit": {
     "preview": {
       "ios": {
-        "appleId": "YOUR_APPLE_ID",
-        "ascAppId": "YOUR_ASC_APP_ID",
-        "appleTeamId": "YOUR_APPLE_TEAM_ID",
+        "appleId": "TODO your Apple ID email — the account invited into the publishing team, NOT a shared login (docs/app-store-submission.md section 1)",
+        "ascAppId": "TODO digits only — App Store Connect > your app > App Information > General Information > Apple ID (docs/app-store-submission.md section 5)",
+        "appleTeamId": "TODO 10 uppercase letters/digits — developer.apple.com/account > switch to the publishing team > Membership details > Team ID (docs/app-store-submission.md section 3)",
         "groups": ["Beta Testers"]
       },
       "android": {
@@ -83,9 +68,9 @@
     },
     "production": {
       "ios": {
-        "appleId": "YOUR_APPLE_ID",
-        "ascAppId": "YOUR_ASC_APP_ID",
-        "appleTeamId": "YOUR_APPLE_TEAM_ID"
+        "appleId": "TODO your Apple ID email — the account invited into the publishing team, NOT a shared login (docs/app-store-submission.md section 1). To use an App Store Connect API key instead, delete this key and add ascApiKeyPath + ascApiKeyId + ascApiKeyIssuerId (section 4.5)",
+        "ascAppId": "TODO digits only — App Store Connect > your app > App Information > General Information > Apple ID (docs/app-store-submission.md section 5)",
+        "appleTeamId": "TODO 10 uppercase letters/digits — developer.apple.com/account > switch to the publishing team > Membership details > Team ID (docs/app-store-submission.md section 3)"
       },
       "android": {
         "serviceAccountKeyPath": "./secrets/google-service-account.json",
