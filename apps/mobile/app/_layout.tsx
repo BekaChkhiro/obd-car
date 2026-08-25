@@ -28,7 +28,12 @@ function RootLayoutInner() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SQLiteProvider databaseName={DB_NAME} onInit={runMigrations}>
         <ToastProvider>
-          <Stack screenOptions={{ headerShown: false }}>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: 'transparent' },
+            }}
+          >
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(app)" />
             <Stack.Screen name="index" redirect />

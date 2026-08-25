@@ -7,5 +7,5 @@ export default function IndexRedirect() {
   const hasOnboarded = useOnboardingStore((s) => s.hasOnboarded);
   if (!user) return <Redirect href="/(auth)/sign-in" />;
   if (!hasOnboarded) return <Redirect href="/(app)/onboarding" />;
-  return <Redirect href="/(app)/" />;
+  return <Redirect href="/(app)/(tabs)/(home)" />;
 }

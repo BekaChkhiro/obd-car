@@ -66,31 +66,31 @@ function WelcomeStep({ onNext }: WelcomeStepProps) {
     >
       <View className="flex-1 justify-center px-8">
         <View className="items-center mb-10">
-          <View className="mb-6 h-20 w-20 items-center justify-center rounded-3xl border border-cyan-500/30 bg-cyan-500/10">
-            <Text className="text-[10px] font-bold tracking-[2px] text-cyan-400">OBD</Text>
+          <View className="mb-6 h-20 w-20 items-center justify-center rounded-3xl border border-accent bg-accent-soft">
+            <Text className="text-[10px] font-bold tracking-[2px] text-accent">OBD</Text>
           </View>
-          <Text className="text-center text-3xl font-bold text-zinc-50">
+          <Text className="text-center text-3xl font-bold text-text-primary">
             {t('onboarding.welcome.title')}
           </Text>
-          <Text className="mt-3 text-center text-base leading-6 text-zinc-500">
+          <Text className="mt-3 text-center text-base leading-6 text-text-muted">
             {t('onboarding.welcome.subtitle')}
           </Text>
         </View>
 
-        <View className="mb-8 rounded-2xl border border-cyan-500/30 bg-cyan-500/10 px-5 py-4">
-          <Text className="mb-1 text-[10px] font-bold tracking-[2px] text-cyan-300">
+        <View className="mb-8 rounded-2xl border border-accent bg-accent-soft px-5 py-4">
+          <Text className="mb-1 text-[10px] font-bold tracking-[2px] text-accent">
             {t('onboarding.welcome.bleHeading').toUpperCase()}
           </Text>
-          <Text className="text-sm leading-5 text-cyan-200/80">
+          <Text className="text-sm leading-5 text-accent/80">
             {t('onboarding.welcome.bleBody')}
           </Text>
         </View>
 
         <Pressable
           onPress={onNext}
-          className="items-center rounded-2xl bg-cyan-500 py-4 active:bg-cyan-600"
+          className="items-center rounded-2xl bg-accent py-4 active:bg-accent-strong"
         >
-          <Text className="text-base font-bold tracking-wider text-zinc-950">
+          <Text className="text-base font-bold tracking-wider text-on-accent">
             {t('onboarding.welcome.next').toUpperCase()}
           </Text>
         </Pressable>
@@ -164,21 +164,21 @@ function PairStep({ onNext, onSkip }: PairStepProps) {
     return (
       <View className="flex-1 justify-center px-8">
         <View className="mb-10 items-center">
-          <View className="mb-4 h-16 w-16 items-center justify-center rounded-full border border-emerald-500/40 bg-emerald-500/10">
-            <View className="h-2 w-2 rounded-full bg-emerald-400" />
+          <View className="mb-4 h-16 w-16 items-center justify-center rounded-full border border-success/30 bg-success-soft">
+            <View className="h-2 w-2 rounded-full bg-success" />
           </View>
-          <Text className="text-center text-xl font-bold text-zinc-50">
+          <Text className="text-center text-xl font-bold text-text-primary">
             {t('onboarding.pair.connected')}
           </Text>
-          <Text className="mt-2 text-center text-sm text-zinc-500" numberOfLines={1}>
+          <Text className="mt-2 text-center text-sm text-text-muted" numberOfLines={1}>
             {connectedDeviceId}
           </Text>
         </View>
         <Pressable
           onPress={onNext}
-          className="mb-3 items-center rounded-2xl bg-cyan-500 py-4 active:bg-cyan-600"
+          className="mb-3 items-center rounded-2xl bg-accent py-4 active:bg-accent-strong"
         >
-          <Text className="text-base font-bold tracking-wider text-zinc-950">
+          <Text className="text-base font-bold tracking-wider text-on-accent">
             {t('onboarding.pair.next').toUpperCase()}
           </Text>
         </Pressable>
@@ -189,37 +189,37 @@ function PairStep({ onNext, onSkip }: PairStepProps) {
   return (
     <View className="flex-1">
       <View className="px-6 pt-2 pb-4">
-        <Text className="text-2xl font-bold text-zinc-50">
+        <Text className="text-2xl font-bold text-text-primary">
           {t('onboarding.pair.title')}
         </Text>
-        <Text className="mt-1 text-sm text-zinc-500">
+        <Text className="mt-1 text-sm text-text-muted">
           {t('onboarding.pair.subtitle')}
         </Text>
       </View>
 
-      <View className="mx-6 mb-4 flex-row items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 py-3">
+      <View className="mx-6 mb-4 flex-row items-center justify-between rounded-2xl border border-border bg-surface px-4 py-3">
         <View>
           {isScanning ? (
             <View className="flex-row items-center gap-2">
               <ActivityIndicator size="small" color={colors.accent} />
-              <Text className="text-sm text-cyan-300">
+              <Text className="text-sm text-accent">
                 {t('pair.scanning')}
               </Text>
             </View>
           ) : isConnecting ? (
             <View className="flex-row items-center gap-2">
               <ActivityIndicator size="small" color={colors.warning} />
-              <Text className="text-sm text-amber-300">{t('onboarding.pair.connecting')}</Text>
+              <Text className="text-sm text-warning">{t('onboarding.pair.connecting')}</Text>
             </View>
           ) : (
-            <Text className="text-sm text-zinc-400">
+            <Text className="text-sm text-text-muted">
               {devices.length === 0
                 ? t('onboarding.pair.noDevices')
                 : t('onboarding.pair.devicesFound', { count: devices.length })}
             </Text>
           )}
           {!permissionGranted && Platform.OS === 'android' && (
-            <Text className="mt-0.5 text-xs text-red-400">
+            <Text className="mt-0.5 text-xs text-danger">
               {t('pair.permissionDenied')}
             </Text>
           )}
@@ -230,12 +230,12 @@ function PairStep({ onNext, onSkip }: PairStepProps) {
           accessibilityRole="button"
           accessibilityLabel={isScanning ? t('pair.stop') : t('pair.scan')}
           className={`rounded-lg px-4 py-2.5 ${
-            isScanning ? 'bg-zinc-800' : isConnecting ? 'bg-zinc-900' : 'bg-cyan-500'
+            isScanning ? 'bg-surface-muted' : isConnecting ? 'bg-surface' : 'bg-accent'
           }`}
         >
           <Text
             className={`text-[11px] font-bold tracking-wider ${
-              isScanning ? 'text-zinc-300' : isConnecting ? 'text-zinc-600' : 'text-zinc-950'
+              isScanning ? 'text-text-secondary' : isConnecting ? 'text-text-dim' : 'text-on-accent'
             }`}
           >
             {isScanning ? t('pair.stop') : t('pair.scan')}
@@ -254,27 +254,27 @@ function PairStep({ onNext, onSkip }: PairStepProps) {
             accessibilityRole="button"
             accessibilityLabel={`${item.name ?? t('onboarding.pair.unknownDevice')}, ${rssiLabel(item.rssi)}`}
             accessibilityState={{ selected: connectedDeviceId === item.id }}
-            className="mx-6 mb-2 rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 active:bg-zinc-900"
+            className="mx-6 mb-2 rounded-xl border border-border bg-surface px-4 py-3 active:bg-surface"
           >
             <View className="flex-row items-center justify-between">
               <View className="flex-1 mr-3">
-                <Text className="text-sm font-semibold text-zinc-50" numberOfLines={1}>
+                <Text className="text-sm font-semibold text-text-primary" numberOfLines={1}>
                   {item.name ?? t('onboarding.pair.unknownDevice')}
                 </Text>
-                <Text className="mt-0.5 text-[11px] text-zinc-500" numberOfLines={1}>
+                <Text className="mt-0.5 text-[11px] text-text-muted" numberOfLines={1}>
                   {item.id}
                 </Text>
-                <Text className="mt-1 text-[11px] text-cyan-400">
+                <Text className="mt-1 text-[11px] text-accent">
                   {rssiLabel(item.rssi)}
                 </Text>
               </View>
               <View
                 className={`rounded-lg px-3 py-2.5 ${
                   connectedDeviceId === item.id
-                    ? 'border border-emerald-500/30 bg-emerald-500/10'
+                    ? 'border border-success/30 bg-success-soft'
                     : isConnecting
-                      ? 'border border-amber-500/30 bg-amber-500/10'
-                      : 'bg-cyan-500'
+                      ? 'border border-warning/30 bg-warning-soft'
+                      : 'bg-accent'
                 }`}
               >
                 {isConnecting && connectedDeviceId !== item.id ? (
@@ -282,7 +282,7 @@ function PairStep({ onNext, onSkip }: PairStepProps) {
                 ) : (
                   <Text
                     className={`text-[11px] font-bold tracking-wider ${
-                      connectedDeviceId === item.id ? 'text-emerald-300' : 'text-zinc-950'
+                      connectedDeviceId === item.id ? 'text-success' : 'text-on-accent'
                     }`}
                   >
                     {connectedDeviceId === item.id ? t('onboarding.pair.connectedBadge') : t('pair.connect').toUpperCase()}
@@ -295,7 +295,7 @@ function PairStep({ onNext, onSkip }: PairStepProps) {
         ListEmptyComponent={
           !isScanning && !isConnecting ? (
             <View className="mt-6 items-center px-8">
-              <Text className="text-center text-sm text-zinc-500">
+              <Text className="text-center text-sm text-text-muted">
                 {t('onboarding.pair.emptyList')}
               </Text>
             </View>
@@ -304,12 +304,12 @@ function PairStep({ onNext, onSkip }: PairStepProps) {
         contentContainerStyle={{ paddingBottom: 100 }}
       />
 
-      <View className="absolute bottom-0 left-0 right-0 bg-bg px-6 pb-6 pt-3">
+      <View className="absolute bottom-0 left-0 right-0 bg-surface px-6 pb-6 pt-3">
         <Pressable
           onPress={onSkip}
-          className="items-center rounded-2xl border border-zinc-800 py-3 active:bg-zinc-900"
+          className="items-center rounded-2xl border border-border py-3 active:bg-surface"
         >
-          <Text className="text-sm font-semibold text-zinc-400">
+          <Text className="text-sm font-semibold text-text-muted">
             {t('onboarding.pair.skip')}
           </Text>
         </Pressable>
@@ -363,10 +363,10 @@ function VinStep({ onNext, onSkip }: VinStepProps) {
         keyboardShouldPersistTaps="handled"
       >
         <View className="flex-1 px-6 pt-2">
-          <Text className="text-2xl font-bold text-zinc-50">
+          <Text className="text-2xl font-bold text-text-primary">
             {t('onboarding.vin.title')}
           </Text>
-          <Text className="mb-6 mt-1 text-sm text-zinc-500">
+          <Text className="mb-6 mt-1 text-sm text-text-muted">
             {t('onboarding.vin.subtitle')}
           </Text>
 
@@ -377,31 +377,31 @@ function VinStep({ onNext, onSkip }: VinStepProps) {
                 disabled={vinStatus === 'reading' || vinStatus === 'success'}
                 className={`flex-row items-center justify-center gap-2 rounded-xl px-4 py-3 ${
                   vinStatus === 'success'
-                    ? 'border border-emerald-500/30 bg-emerald-500/10'
+                    ? 'border border-success/30 bg-success-soft'
                     : vinStatus === 'reading'
-                      ? 'bg-zinc-900'
-                      : 'bg-cyan-500'
+                      ? 'bg-surface'
+                      : 'bg-accent'
                 }`}
               >
                 {vinStatus === 'reading' ? (
                   <>
                     <ActivityIndicator size="small" color={colors.textSecondary} />
-                    <Text className="text-sm font-semibold text-zinc-400">
+                    <Text className="text-sm font-semibold text-text-muted">
                       {t('onboarding.vin.autoReading')}
                     </Text>
                   </>
                 ) : vinStatus === 'success' ? (
-                  <Text className="text-sm font-semibold text-emerald-300">
+                  <Text className="text-sm font-semibold text-success">
                     {t('onboarding.vin.autoSuccess')}
                   </Text>
                 ) : (
-                  <Text className="text-sm font-bold tracking-wider text-zinc-950">
+                  <Text className="text-sm font-bold tracking-wider text-on-accent">
                     {t('onboarding.vin.readVin').toUpperCase()}
                   </Text>
                 )}
               </Pressable>
               {vinStatus === 'failed' && (
-                <Text className="mt-2 text-center text-xs text-red-400">
+                <Text className="mt-2 text-center text-xs text-danger">
                   {t('onboarding.vin.autoFailed')}
                 </Text>
               )}
@@ -413,7 +413,7 @@ function VinStep({ onNext, onSkip }: VinStepProps) {
             : true) && (
             <View className="mb-2">
               {isConnected && (
-                <Text className="mb-2 text-center text-xs text-zinc-500">
+                <Text className="mb-2 text-center text-xs text-text-muted">
                   {t('onboarding.vin.orEnterManually')}
                 </Text>
               )}
@@ -424,15 +424,15 @@ function VinStep({ onNext, onSkip }: VinStepProps) {
                 placeholderTextColor={colors.textDim}
                 autoCapitalize="characters"
                 maxLength={17}
-                className="rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm font-mono text-zinc-50"
+                className="rounded-xl border border-border bg-surface px-4 py-3 text-sm font-mono text-text-primary"
               />
             </View>
           )}
 
           {vinStatus === 'success' && (
-            <View className="mb-2 rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3">
-              <Text className="mb-1 text-[10px] font-bold tracking-[2px] text-zinc-500">VIN</Text>
-              <Text className="font-mono text-sm font-semibold text-zinc-50">{vin}</Text>
+            <View className="mb-2 rounded-xl border border-border bg-surface px-4 py-3">
+              <Text className="mb-1 text-[10px] font-bold tracking-[2px] text-text-muted">VIN</Text>
+              <Text className="font-mono text-sm font-semibold text-text-primary">{vin}</Text>
             </View>
           )}
         </View>
@@ -441,17 +441,17 @@ function VinStep({ onNext, onSkip }: VinStepProps) {
       <View className="gap-3 px-6 pb-6">
         <Pressable
           onPress={handleContinue}
-          className="items-center rounded-2xl bg-cyan-500 py-4 active:bg-cyan-600"
+          className="items-center rounded-2xl bg-accent py-4 active:bg-accent-strong"
         >
-          <Text className="text-base font-bold tracking-wider text-zinc-950">
+          <Text className="text-base font-bold tracking-wider text-on-accent">
             {t('onboarding.vin.next').toUpperCase()}
           </Text>
         </Pressable>
         <Pressable
           onPress={onSkip}
-          className="items-center rounded-2xl border border-zinc-800 py-3 active:bg-zinc-900"
+          className="items-center rounded-2xl border border-border py-3 active:bg-surface"
         >
-          <Text className="text-sm font-semibold text-zinc-400">
+          <Text className="text-sm font-semibold text-text-muted">
             {t('onboarding.vin.skip')}
           </Text>
         </Pressable>
@@ -473,15 +473,15 @@ function LanguageStep({ onFinish }: LanguageStepProps) {
   return (
     <View className="flex-1 justify-center px-8">
       <View className="mb-10 items-center">
-        <Text className="text-center text-3xl font-bold text-zinc-50">
+        <Text className="text-center text-3xl font-bold text-text-primary">
           {t('onboarding.language.title')}
         </Text>
-        <Text className="mt-3 text-center text-base leading-6 text-zinc-500">
+        <Text className="mt-3 text-center text-base leading-6 text-text-muted">
           {t('onboarding.language.subtitle')}
         </Text>
       </View>
 
-      <View className="mb-10 flex-row gap-2 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-1">
+      <View className="mb-10 flex-row gap-2 rounded-2xl border border-border bg-surface p-1">
         {(['en', 'ka'] as Locale[]).map((lng) => (
           <Pressable
             key={lng}
@@ -495,14 +495,14 @@ function LanguageStep({ onFinish }: LanguageStepProps) {
           >
             <Text
               className={`text-sm font-bold tracking-wider ${
-                locale === lng ? 'text-accent' : 'text-zinc-400'
+                locale === lng ? 'text-accent' : 'text-text-muted'
               }`}
             >
               {lng === 'en' ? 'ENGLISH' : 'ქართული'}
             </Text>
             <Text
               className={`mt-1 text-[10px] tracking-widest ${
-                locale === lng ? 'text-cyan-600' : 'text-zinc-600'
+                locale === lng ? 'text-accent' : 'text-text-dim'
               }`}
             >
               {lng === 'en' ? 'EN' : 'KA'}
@@ -513,9 +513,9 @@ function LanguageStep({ onFinish }: LanguageStepProps) {
 
       <Pressable
         onPress={onFinish}
-        className="items-center rounded-2xl bg-cyan-500 py-4 active:bg-cyan-600"
+        className="items-center rounded-2xl bg-accent py-4 active:bg-accent-strong"
       >
-        <Text className="text-base font-bold tracking-wider text-zinc-950">
+        <Text className="text-base font-bold tracking-wider text-on-accent">
           {t('onboarding.language.finish').toUpperCase()}
         </Text>
       </Pressable>
@@ -537,11 +537,11 @@ export default function OnboardingScreen() {
 
   function finish() {
     markOnboarded();
-    router.replace('/(app)/');
+    router.replace('/(app)/(tabs)/(home)');
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-bg" edges={['top', 'bottom']}>
+    <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
       {step > 0 && (
         <View className="flex-row items-center gap-3 px-6 pb-2 pt-3">
           <Pressable
@@ -551,17 +551,17 @@ export default function OnboardingScreen() {
             hitSlop={12}
             className="-ml-2 p-2"
           >
-            <Text className="text-sm font-semibold text-cyan-400">← {t('common.back')}</Text>
+            <Text className="text-sm font-semibold text-accent">← {t('common.back')}</Text>
           </Pressable>
           <View className="flex-1 flex-row gap-1">
             {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
               <View
                 key={i}
-                className={`h-1 flex-1 rounded-full ${i <= step ? 'bg-cyan-400' : 'bg-zinc-800'}`}
+                className={`h-1 flex-1 rounded-full ${i <= step ? 'bg-accent' : 'bg-surface-muted'}`}
               />
             ))}
           </View>
-          <Text className="text-[10px] font-semibold tracking-widest text-zinc-500">
+          <Text className="text-[10px] font-semibold tracking-widest text-text-muted">
             {t('onboarding.step', { current: step + 1, total: TOTAL_STEPS })}
           </Text>
         </View>
