@@ -216,10 +216,15 @@ export function BackgroundSequence({ sources, alt, cards = [], statements = [] }
     drawnRef.current = -1;
 
     let cancelled = false;
+    // Frames after the first are fetched at low priority. They are wanted, but
+    // never ahead of the page's own fonts and markup: the reader looks at frame
+    // one for as long as it takes them to start scrolling, and several batches
+    // have landed by then.
     const load = (index: number) =>
       new Promise<void>((resolve) => {
         const image = new Image();
         image.decoding = 'async';
+        if (index > 0) image.fetchPriority = 'low';
         image.src = frameUrl(source, index);
         image.onload = () => {
           if (!cancelled) {

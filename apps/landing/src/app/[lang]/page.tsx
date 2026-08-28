@@ -21,6 +21,14 @@ const BACKDROP_CARD_TIMING = [
   { from: 0.88, to: 1.0, corner: 'top-right', tone: 'live' },
 ] as const;
 
+/**
+ * Bumped whenever the film is re-published. The frames are served with an
+ * `immutable` cache header, so a returning browser never re-checks their URLs —
+ * a new version segment is the only way a change reaches anyone who has already
+ * seen the old one. `video/publish_frames.sh` writes to the matching directory.
+ */
+const STORY_VERSION = 'v1';
+
 export async function generateMetadata({
   params,
 }: {
@@ -56,14 +64,49 @@ export default async function HomePage({
         dangerouslySetInnerHTML={{ __html: jsonLdScript(homeJsonLd(locale, dict)) }}
       />
 
+      {/* The opening frame, requested with the document instead of after the
+          client bundle has parsed and mounted the canvas. It is the one image a
+          visitor is guaranteed to look at, and it is what the page shows while
+          the other 299 stream in behind it.
+
+          Both sizes are preloaded under the media queries the component itself
+          uses to choose between them, so only one is actually fetched. */}
+      <link
+        rel="preload"
+        as="image"
+        href={`/story-video/${STORY_VERSION}/lg/f0001.avif`}
+        type="image/avif"
+        media="(min-width: 901px)"
+        fetchPriority="high"
+      />
+      <link
+        rel="preload"
+        as="image"
+        href={`/story-video/${STORY_VERSION}/sm/f0001.webp`}
+        type="image/webp"
+        media="(max-width: 900px)"
+        fetchPriority="high"
+      />
+
         {/* The film sits behind everything and is scrubbed by the page's own
           scroll — see BackgroundSequence. The sheet that used to carry the
           page is now transparent, so the content reads as glass floating on
           the footage rather than a card covering it. */}
       <BackgroundSequence
         sources={{
-          sm: { dir: '/story-video/sm', width: 640, height: 360, frames: 150 },
-          lg: { dir: '/story-video/lg', width: 1280, height: 720, frames: 300, ext: 'avif' },
+          sm: {
+            dir: `/story-video/${STORY_VERSION}/sm`,
+            width: 640,
+            height: 360,
+            frames: 150,
+          },
+          lg: {
+            dir: `/story-video/${STORY_VERSION}/lg`,
+            width: 1280,
+            height: 720,
+            frames: 300,
+            ext: 'avif',
+          },
         }}
         alt={dict.story.alt}
         statements={[

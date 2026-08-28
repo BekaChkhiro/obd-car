@@ -19,7 +19,11 @@ set -e
 cd "$(dirname "$0")"
 
 SRC=${1:-story_hq.mp4}
-OUT=../public/story-video
+# Bump this whenever the film changes. The frames are served `immutable`, so a
+# browser that has them will never re-check the URL — a new version directory is
+# the only thing that reaches a returning visitor.
+VERSION=${VERSION:-v1}
+OUT=../public/story-video/$VERSION
 TMP=.frames_tmp
 LG_COUNT=300
 LG_W=1280
@@ -52,4 +56,4 @@ SM=$(ls "$OUT/sm" | wc -l | tr -d ' ')
 echo "lg: $LG frames ${LG_W}x${LG_H}, $(du -sh $OUT/lg | cut -f1)"
 echo "sm: $SM frames ${SM_W}x${SM_H}, $(du -sh $OUT/sm | cut -f1)"
 echo
-echo "Update the frame counts in src/app/[lang]/layout.tsx: lg=$LG sm=$SM"
+echo "Update src/app/[lang]/page.tsx: STORY_VERSION='$VERSION', lg=$LG sm=$SM"
