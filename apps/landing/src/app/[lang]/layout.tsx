@@ -7,7 +7,6 @@ import { getDictionary } from '@/i18n';
 import { isLocale, locales, localeTags, type Locale } from '@/i18n/config';
 import { alternatesFor, site, siteUrl, urlFor } from '@/lib/site';
 import { Header } from '@/components/Header';
-import { Footer } from '@/components/Footer';
 
 /**
  * Georgian is not an afterthought here, so the type system is picked for its
@@ -111,13 +110,6 @@ export async function generateMetadata({
   };
 }
 
-/**
- * Runs before first paint so a visitor who chose a theme never sees the other
- * flash. Deliberately tiny and inline — an external file would be a second
- * render-blocking request for four lines of work.
- */
-const themeScript = `(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t)}}catch(e){}})();`;
-
 export default async function LocaleLayout({
   children,
   params,
@@ -138,9 +130,6 @@ export default async function LocaleLayout({
       suppressHydrationWarning
       className={`${display.variable} ${body.variable} ${mono.variable}`}
     >
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-      </head>
       <body>
         <a
           href="#main"
@@ -149,14 +138,13 @@ export default async function LocaleLayout({
           {dict.nav.skipToContent}
         </a>
 
-        {/* The page is a rounded sheet on a deeper ground — the same relationship
-            the app's cards have with its background, scaled up to the document. */}
-        <div className="mx-auto w-full max-w-[102rem] p-2 sm:p-4">
-          <div className="overflow-hidden rounded-[1.5rem] bg-sheet shadow-[var(--shadow-sheet)] sm:rounded-[2rem]">
-            <Header locale={locale} dict={dict} />
-            <main id="main">{children}</main>
-            <Footer locale={locale} dict={dict} />
-          </div>
+
+        <div className="relative z-10 mx-auto w-full max-w-[102rem] px-2 sm:px-4">
+          {/* overflow-clip, not overflow-hidden: `hidden` makes this a scroll
+              container, which silently breaks `position: sticky` for anything
+              inside it. `clip` rounds the corners without that side effect. */}
+          <Header locale={locale} dict={dict} />
+          <main id="main">{children}</main>
         </div>
       </body>
     </html>

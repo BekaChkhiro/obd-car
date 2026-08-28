@@ -6,8 +6,8 @@ import type { Dictionary } from './ka';
  */
 export const en = {
   meta: {
-    title: 'OBD-II AI Diagnostics — Ask Your Car What Is Wrong',
-    titleTemplate: '%s · OBD-II AI Diagnostics',
+    title: 'Auto Area — Ask Your Car What Is Wrong',
+    titleTemplate: '%s · Auto Area',
     description:
       'An ELM327 OBD-II adapter pairs with your phone over Bluetooth and streams live engine data and fault codes. An AI assistant reads them and tells you what they actually mean.',
     keywords: [
@@ -24,7 +24,7 @@ export const en = {
       'Bluetooth OBD adapter',
       'freeze frame data',
     ],
-    ogAlt: 'OBD-II AI diagnostics — live telemetry and an AI assistant',
+    ogAlt: 'Auto Area — live telemetry and an AI assistant',
   },
 
   nav: {
@@ -59,6 +59,50 @@ export const en = {
   intro: {
     body: 'The app pairs with an ELM327 adapter over Bluetooth, reads live readings and fault codes straight from the ECU, and hands those same numbers to the AI assistant.',
     title: 'Live data, an answer you can act on',
+  },
+
+  story: {
+    eyebrow: 'What it looks like',
+    intro: ['IF', 'YOU ARE TIRED', 'OF TRAILING ROUND', 'THE GARAGES'],
+    intro2: ['YOU', 'NEED', 'OUR', 'APP'],
+    intro3: ['CONNECT', 'YOUR CAR', 'TO OUR', 'APP'],
+    intro4: ['CHECK', "YOUR CAR'S", 'REAL', 'PROBLEMS'],
+    intro5: ['NOW', 'YOUR CAR', 'IS IN', 'YOUR HANDS'],
+    outro: {
+      eyebrow: 'Download',
+      title: 'Start today',
+      body: 'Scan the code or pick a store — the app is free and pairs with an ELM327 adapter from the first minute.',
+      qr: 'Scan with your phone',
+      social: 'Follow us',
+      shot: 'Auto Area — the main screen with live readings',
+    },
+    title: 'From one warning light to a plain answer',
+    alt: 'Animation: a driver stuck at an open bonnet works out what is wrong with the car by reading the fault code on their phone.',
+    cards: [
+      { eyebrow: 'Fault', title: 'The check engine light is on', body: 'The lamp is lit and nothing says why.' },
+      { eyebrow: 'Auto Area', title: 'The app is in your pocket', body: 'No booking a garage, no waiting for a slot.' },
+      { eyebrow: 'ELM327', title: 'Adapter connected', body: 'Over Bluetooth, straight from the OBD-II port.' },
+      { eyebrow: 'P0420', title: 'Catalyst efficiency below threshold', body: 'The assistant explains what the code means and how urgent it is.' },
+      { eyebrow: 'Resolved', title: 'Fault cleared', body: 'Code erased, readings back in range.' },
+    ],
+    captions: [
+      {
+        title: 'The light is on',
+        body: 'The check engine light is lit and nothing tells you why. Opening the bonnet does not help.',
+      },
+      {
+        title: 'Out comes the phone',
+        body: 'The ELM327 adapter is already in the OBD-II port, waiting over Bluetooth.',
+      },
+      {
+        title: 'The app reads the car',
+        body: 'Live readings and fault codes, straight off the ECU.',
+      },
+      {
+        title: 'You get an answer',
+        body: 'The assistant explains what the code means, how urgent it is, and what fixing it takes.',
+      },
+    ],
   },
 
   features: {
@@ -228,7 +272,7 @@ export const en = {
   privacyPage: {
     title: 'Privacy Policy',
     description:
-      'What the OBD-II AI diagnostic app reads, why, where it is stored and how to delete it.',
+      'What Auto Area reads, why, where it is stored and how to delete it.',
     effective: 'Effective',
     intro:
       'This page summarises how the app handles your data. It is the binding version; the Georgian page is a translation of it.',

@@ -1,7 +1,19 @@
+import Image from 'next/image';
+
 /**
- * The mark is the OBD-II port itself — the 16-pin trapezoid every user of this
- * app has crouched under a steering wheel to find. Drawn rather than imported
- * so it inherits `currentColor` and needs no second asset request per theme.
+ * The brand mark — the car silhouette with a diagnostic pulse running through
+ * it — lifted from the app icon (apps/mobile/assets/icon.png) by
+ * apps/landing/video/../scripts: the white ground is keyed out and the navy
+ * outline remapped to a pale ink, because the header is dark glass over the
+ * film and the original near-black outline disappeared against it. The pulse
+ * keeps its blue-to-teal gradient untouched.
+ *
+ * The lettering stays live type rather than part of the image: it is sharper at
+ * this size, and it is the piece a designer is most likely to want to restyle.
+ *
+ * If a vector of the mark ever exists, swap the <Image> for an inline SVG — it
+ * would drop the request and let the outline inherit `currentColor`, which is
+ * what the previous hand-drawn mark did.
  */
 export function Wordmark({
   className = '',
@@ -13,32 +25,24 @@ export function Wordmark({
 }) {
   return (
     <span className={`flex items-center gap-2.5 ${className}`}>
-      <svg
+      <Image
+        src="/logo-mark.png"
+        alt=""
         aria-hidden="true"
-        viewBox="0 0 28 20"
-        className="h-[21px] w-[29px] text-ink"
-        fill="none"
-      >
-        <path
-          d="M2.6 3.4h22.8a1 1 0 0 1 1 1v7.9a4 4 0 0 1-4 4H5.6a4 4 0 0 1-4-4V4.4a1 1 0 0 1 1-1Z"
-          stroke="currentColor"
-          strokeWidth="1.5"
-        />
-        <g fill="currentColor">
-          {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-            <rect key={`t${i}`} x={4.6 + i * 2.45} y={6} width="1.3" height="2.2" rx="0.4" />
-          ))}
-          {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-            <rect key={`b${i}`} x={4.6 + i * 2.45} y={10.4} width="1.3" height="2.2" rx="0.4" />
-          ))}
-        </g>
-      </svg>
+        width={640}
+        height={318}
+        priority
+        className="h-[26px] w-auto"
+      />
       <span
-        className={`font-display text-[17px] font-bold tracking-[-0.02em] text-ink ${
+        // The brand face, not `font-display`: it has one weight and its own
+        // heavy drawing, so no font-bold here.
+        style={{ fontFamily: 'var(--font-brand), var(--font-display)' }}
+        className={`text-[18px] tracking-[0.01em] text-ink ${
           compact ? 'hidden sm:inline' : ''
         }`}
       >
-        OBD<span className="text-ink-3">·</span>II<span className="ml-1 text-ink-3">AI</span>
+        Auto<span className="ml-1.5 text-ink-3">Area</span>
       </span>
     </span>
   );

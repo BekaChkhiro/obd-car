@@ -26,19 +26,63 @@ export function PhoneFrame({
 }) {
   return (
     <div className={`relative ${className}`}>
+      {/* Side buttons, drawn behind the body so only the sliver that overhangs
+          the edge shows — which is all a real phone shows from the front. */}
+      <span
+        aria-hidden="true"
+        className="absolute -left-[3px] top-[16%] z-0 h-[4%] w-[3px] rounded-l-sm"
+        style={{ background: 'linear-gradient(180deg,#6b7080,#3a3e4b)' }}
+      />
+      <span
+        aria-hidden="true"
+        className="absolute -left-[3px] top-[23%] z-0 h-[7%] w-[3px] rounded-l-sm"
+        style={{ background: 'linear-gradient(180deg,#6b7080,#3a3e4b)' }}
+      />
+      <span
+        aria-hidden="true"
+        className="absolute -left-[3px] top-[32%] z-0 h-[7%] w-[3px] rounded-l-sm"
+        style={{ background: 'linear-gradient(180deg,#6b7080,#3a3e4b)' }}
+      />
+      <span
+        aria-hidden="true"
+        className="absolute -right-[3px] top-[26%] z-0 h-[11%] w-[3px] rounded-r-sm"
+        style={{ background: 'linear-gradient(180deg,#6b7080,#3a3e4b)' }}
+      />
+
+      {/* The rail. A single flat colour reads as a drawing of a phone; the
+          gradient is what makes it read as a machined metal band catching light
+          on its left and right edges. */}
       <div
-        className="rounded-[2.75rem] p-[0.45rem] shadow-[var(--shadow-lift)] ring-1 ring-hairline-strong"
-        style={{ background: '#0e0e14' }}
+        className="relative rounded-[2.9rem] p-[3px] shadow-[0_30px_60px_-20px_rgb(0_0_0/0.75)]"
+        style={{
+          background:
+            'linear-gradient(145deg,#8f95a6 0%,#4a4f5e 18%,#2b2f3a 38%,#22252e 62%,#4a4f5e 84%,#8f95a6 100%)',
+        }}
       >
+        {/* Bezel: the black between the metal and the glass. */}
+        <div
+          className="rounded-[2.75rem] p-[0.42rem]"
+          style={{ background: '#08080c' }}
+        >
         {/* aspect-ratio reserves the box before paint, so nothing around the
             phone shifts once the screen content or image resolves. */}
         <div className="app-screen relative overflow-hidden rounded-[2.35rem] aspect-[9/19]">
           {/* Dynamic island */}
           <div
             className="absolute left-1/2 top-2 z-20 h-[1.15rem] w-[4.6rem] -translate-x-1/2 rounded-full"
-            style={{ background: '#0e0e14' }}
+            style={{ background: '#08080c' }}
             aria-hidden="true"
-          />
+          >
+            {/* Camera. Small, off-centre and barely lit — enough to stop the
+                island reading as a plain black lozenge. */}
+            <span
+              className="absolute right-[0.42rem] top-1/2 h-[0.42rem] w-[0.42rem] -translate-y-1/2 rounded-full"
+              style={{
+                background:
+                  'radial-gradient(circle at 35% 30%, #2b3550 0%, #10131c 60%, #05060a 100%)',
+              }}
+            />
+          </div>
           {src ? (
             <Image
               src={src}
@@ -51,6 +95,18 @@ export function PhoneFrame({
           ) : (
             children
           )}
+
+          {/* Screen glare: a soft diagonal sheen across the glass. Kept very
+              low so it never fights the screenshot underneath. */}
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 z-10"
+            style={{
+              background:
+                'linear-gradient(122deg, rgb(255 255 255 / 0.1) 0%, rgb(255 255 255 / 0.03) 18%, transparent 42%)',
+            }}
+          />
+        </div>
         </div>
       </div>
     </div>

@@ -3,3 +3,28 @@
 next-env.d.ts
 *.tsbuildinfo
 .env*.local
+.vercel
+
+# Blender working renders — only the published frames in public/story are tracked
+# Blender outputs. build_scene.py regenerates all of it, including the .blend
+# files — the script is the scene, not the binary.
+blender/out/
+blender/out-light/
+blender/out-light-sm/
+blender/out-dark/
+blender/out-dark-sm/
+blender/ref/
+blender/*.blend
+blender/*.blend1
+
+# Video working files. The finished frames the site actually loads live in
+# public/story-video and are tracked; everything here is an intermediate that
+# the scripts beside it regenerate:
+#   clips/, clips-hq/  the raw Wan renders, one per scene
+#   *.mp4              the assembled cuts and their crops
+# scenes/ IS tracked — those stills are the irreplaceable input to the whole
+# pipeline, and no script can recreate them.
+video/clips/
+video/clips-hq/
+video/*.mp4
+video/.frames_tmp/

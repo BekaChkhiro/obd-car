@@ -105,6 +105,12 @@
 }
 
 /* Explicit dark choice, so the toggle wins over a light OS too. */
+/* The page floats on the story film, which is a single dark evening scene, so
+   the dark palette is the base rather than an alternative: a light page over
+   that footage would need near-opaque panels and stop being glass. The
+   data-theme selector is kept so an explicit choice still resolves here. */
+:root,
+:root[data-theme='light'],
 :root[data-theme='dark'] {
   color-scheme: dark;
 
@@ -268,12 +274,14 @@
 
   /* Uppercase mono label. Georgian is unicase, so `uppercase` maps Mkhedruli to
      Mtavruli — the tracking is what carries the label read in both scripts. */
+  /* No `text-transform: uppercase` here any more: the brand face has no
+     Mtavruli, so uppercasing Georgian would drop it out of the font. The face's
+     lowercase is drawn as capitals anyway, so the label reads the same. */
   .eyebrow {
-    font-family: var(--font-mono);
+    font-family: var(--font-brand), var(--font-mono);
     font-size: 0.6875rem;
-    font-weight: 500;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
+    font-weight: 400;
+    letter-spacing: 0.14em;
     color: var(--ink-3);
     line-height: 1.4;
   }
@@ -372,4 +380,125 @@
     transform: scale(2.6);
     opacity: 0;
   }
+}
+
+/* --------------------------------------------------------------------------
+   Brand display face
+   Dachi The Lynx by Mariam Chachanidze (typeface.ge), self-hosted because it is
+   not on any web-font CDN. It carries Latin and Mkhedruli in one file, which is
+   the whole point — the wordmark and headings now look the same in both
+   languages instead of switching typeface at the language toggle.
+
+   It is a display face and is treated as one:
+     * one weight only, so nothing here asks it for bold — the drawing is
+       already heavy, and a synthesised bold would smear it;
+     * its lowercase is drawn as capitals, so it is unreadable as body copy at
+       paragraph sizes. Body text stays on Noto Sans Georgian;
+     * it has no Mtavruli (0 of 33), so `text-transform: uppercase` on Georgian
+       would fall out of the font mid-word. Anything set in this face must not
+       be uppercased — see `.eyebrow` below, which drops the transform when it
+       is used.
+-------------------------------------------------------------------------- */
+:root {
+  --font-brand: 'Dachi The Lynx';
+}
+
+@font-face {
+  font-family: 'Dachi The Lynx';
+  src: url('/fonts/DachiTheLynx-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --------------------------------------------------------------------------
+   Glass
+   The page now floats on the story film, so panels take their contrast from the
+   footage rather than from the sheet. These are deliberately dark in both
+   themes: the footage is a single evening scene, and a light panel over it
+   would have to be near-opaque to stay readable, which defeats the point.
+-------------------------------------------------------------------------- */
+.glass {
+  background: rgb(10 12 18 / 0.5);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid rgb(255 255 255 / 0.12);
+  box-shadow: 0 18px 50px -20px rgb(0 0 0 / 0.7);
+}
+
+/* The glass pane for the closing panel.
+   There is no `backdrop-filter` here on purpose: the film is a fixed,
+   composited canvas, which Chrome leaves out of the backdrop image, so a blur
+   set here was silently ignored at any radius. BackgroundSequence paints the
+   frosted layer itself and clips it to `[data-glass-panel]`; this rule supplies
+   only what sits on top of it — the white veil, the rim and the top highlight
+   that keep it reading as glass rather than as a hole in the page. */
+.glass-strong {
+  background:
+    linear-gradient(
+      160deg,
+      rgb(255 255 255 / 0.07) 0%,
+      rgb(255 255 255 / 0.02) 45%,
+      rgb(255 255 255 / 0.01) 100%
+    ),
+    rgb(10 12 18 / 0.5);
+  border: 1px solid rgb(255 255 255 / 0.16);
+  box-shadow:
+    0 30px 70px -28px rgb(0 0 0 / 0.75),
+    inset 0 1px 0 0 rgb(255 255 255 / 0.22);
+}
+
+.glass-soft {
+  background: rgb(10 12 18 / 0.34);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid rgb(255 255 255 / 0.09);
+}
+
+/* Backdrop-filter is the whole effect; where it is unsupported the panels fall
+   back to a flat tint that is opaque enough to keep text legible. */
+@supports not (backdrop-filter: blur(1px)) {
+  .glass { background: rgb(10 12 18 / 0.88); }
+  /* Frosted rather than tinted. The everyday `.glass` is a dark fill that happens
+   to blur; this is the other way round — the blur does the work and the fill is
+   a thin white veil, which is what makes it read as glass rather than as a
+   panel. A heavy blur is what keeps white text legible on it: the footage
+   underneath is reduced to soft colour, not detail.
+
+   The top highlight is the tell. Real glass catches light on its upper edge,
+   and without that gradient the panel reads as flat translucent plastic. */
+.glass-strong {
+  background:
+    linear-gradient(
+      160deg,
+      rgb(255 255 255 / 0.14) 0%,
+      rgb(255 255 255 / 0.06) 42%,
+      rgb(255 255 255 / 0.04) 100%
+    );
+  backdrop-filter: blur(44px) saturate(160%) brightness(0.72);
+  -webkit-backdrop-filter: blur(44px) saturate(160%) brightness(0.72);
+  border: 1px solid rgb(255 255 255 / 0.22);
+  box-shadow:
+    0 30px 70px -28px rgb(0 0 0 / 0.75),
+    inset 0 1px 0 0 rgb(255 255 255 / 0.22);
+}
+
+.glass-soft { background: rgb(10 12 18 / 0.78); }
+}
+
+/* Over footage there is only one legible palette, so the page pins itself to
+   the dark tokens regardless of the theme toggle, and lifts the muted inks a
+   step for contrast against moving imagery. */
+/* The background film is a fixed layer at z-index -10. `body` is not a stacking
+   context, so a negative-z child paints *behind* body's own background box —
+   an opaque body would hide the film entirely. The frame colour moves to <html>
+   instead, where it still paints first and still shows before the first frame
+   decodes. */
+html {
+  background-color: var(--frame);
+}
+
+body {
+  background-color: transparent;
+  color: #f1f3f9;
 }

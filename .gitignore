@@ -83,3 +83,6 @@ coverage/
 .planflow/index-state.json
 apps/*/.planflow/
 .workstation/
+
+# Local tool state
+.devapp/

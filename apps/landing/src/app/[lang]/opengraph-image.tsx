@@ -65,7 +65,7 @@ export default async function Image({
   // Mtavruli — a separate Unicode block. Without both cases in the subset every
   // label would render as tofu, so the uppercased text goes in too.
   const text =
-    headline + eyebrow + readouts.map((r) => r.label).join('') + 'OBD·IIAI0123456789 RPM°CVP0301';
+    headline + eyebrow + readouts.map((r) => r.label).join('') + 'AutoArea0123456789 RPM°CVP0301';
   const glyphs = text + text.toUpperCase();
 
   let fonts: { name: string; data: ArrayBuffer; weight: 400 | 700; style: 'normal' }[] = [];
