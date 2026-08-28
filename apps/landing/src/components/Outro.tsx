@@ -40,8 +40,12 @@ export function Outro({ locale, dict }: { locale: Locale; dict: Dictionary }) {
 
   // No gutters of its own: the layout wrapper around <main> already supplies
   // them, and a second set inset the panel from the header above it.
+  // `relative z-10` on the section: the film renders from this same page and is
+  // a fixed, positioned layer, so within one stacking context it paints above
+  // static in-flow content. Without this the footage covered the panel's text.
+  //
   return (
-    <section id="download" className="scroll-mt-8 pb-16 pt-6">
+    <section id="download" className="relative z-10 scroll-mt-8 pb-16 pt-6">
       {/* Same container as the header — `max-w-6xl` inside the layout's own
           gutters — so the two panels share an edge. */}
       <div

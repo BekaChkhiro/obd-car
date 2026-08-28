@@ -459,31 +459,7 @@
    back to a flat tint that is opaque enough to keep text legible. */
 @supports not (backdrop-filter: blur(1px)) {
   .glass { background: rgb(10 12 18 / 0.88); }
-  /* Frosted rather than tinted. The everyday `.glass` is a dark fill that happens
-   to blur; this is the other way round — the blur does the work and the fill is
-   a thin white veil, which is what makes it read as glass rather than as a
-   panel. A heavy blur is what keeps white text legible on it: the footage
-   underneath is reduced to soft colour, not detail.
-
-   The top highlight is the tell. Real glass catches light on its upper edge,
-   and without that gradient the panel reads as flat translucent plastic. */
-.glass-strong {
-  background:
-    linear-gradient(
-      160deg,
-      rgb(255 255 255 / 0.14) 0%,
-      rgb(255 255 255 / 0.06) 42%,
-      rgb(255 255 255 / 0.04) 100%
-    );
-  backdrop-filter: blur(44px) saturate(160%) brightness(0.72);
-  -webkit-backdrop-filter: blur(44px) saturate(160%) brightness(0.72);
-  border: 1px solid rgb(255 255 255 / 0.22);
-  box-shadow:
-    0 30px 70px -28px rgb(0 0 0 / 0.75),
-    inset 0 1px 0 0 rgb(255 255 255 / 0.22);
-}
-
-.glass-soft { background: rgb(10 12 18 / 0.78); }
+  .glass-soft { background: rgb(10 12 18 / 0.78); }
 }
 
 /* Over footage there is only one legible palette, so the page pins itself to
